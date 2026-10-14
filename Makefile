@@ -6,7 +6,7 @@ CFLAGS := -O1 -g -Wall -Wno-unused-function -Wno-unused-variable -Isrc/host -Isr
 SRC := $(sort $(wildcard src/macos/*.c src/macos/*.m src/host/*.c src/host/*.S src/gfx/*.c src/gfx/nvn/*.c src/gfx/nvn/*.m src/gfx/nvn/*.S src/gfx/tex/*.c src/gfx/tex/*.m))
 OBJ := $(addprefix $(BUILD)/,$(addsuffix .o,$(notdir $(SRC))))
 VPATH := src/macos:src/host:src/gfx:src/gfx/nvn:src/gfx/tex
-LIBS := -framework Cocoa -framework QuartzCore -framework Metal -framework ImageIO -framework UniformTypeIdentifiers -framework AudioToolbox -framework GameController -framework VideoToolbox -framework CoreMedia -framework CoreVideo
+LIBS := -framework Cocoa -framework QuartzCore -framework Metal -framework ImageIO -framework UniformTypeIdentifiers -framework AudioToolbox -framework GameController -framework VideoToolbox -framework CoreMedia -framework CoreVideo -framework CoreText
 .DEFAULT_GOAL := all
 -include $(OBJ:.o=.d)
 
