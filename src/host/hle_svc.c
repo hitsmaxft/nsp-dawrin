@@ -1,6 +1,7 @@
 // Horizon kernel system calls (triggered by the SDK runtime once the SDK is loaded). Only what the P1 boot chain needs is implemented: memory layout + heap + query + debug output + timing.
 // Register convention: inputs w1.. / outputs w0=Result, x1=value (GetInfo / SetHeapSize), consistent with the public Horizon ABI.
 #include "dm.h"
+#include "../macos/transfer.h"
 #include "hle.h"
 #include <stdatomic.h>
 #include <sys/mman.h>
@@ -78,9 +79,23 @@ uint64_t svc_dispatch(int num, uint64_t *regs, uint64_t orig_addr) {
     mem_init();
     int svc_ipc(int,uint64_t *);
     if (svc_ipc(num,regs)) return regs[0];
+    int svc_transfer(int,uint64_t *);
+    if (svc_transfer(num,regs)) return regs[0];
     if (svc_thread(num, regs)) return regs[0];
     { uint64_t svc_host_call(int, uint64_t *); if (num >= 0x80 && svc_host_call(num, regs)) return regs[0]; }   // from 0x80: host calls by cut convention (hle_tact.c)
     switch (num) {
+    case 0x51: {
+        uint64_t destination=regs[1],size=regs[2];
+        if(destination<(uint64_t)g_as || size>RESERVE || destination-(uint64_t)g_as>RESERVE-size || map_find(destination,size)) {regs[0]=0xd401;return regs[0];}
+        regs[0]=native_transfer_map(regs[0],destination,size,regs[3]);
+        if(!regs[0])map_add(destination,size,0,0x0d);
+        return regs[0];
+    }
+    case 0x52: {
+        uint64_t destination=regs[1],size=regs[2];int k=map_find(destination,size);
+        if(!k || g_map[k-1].base!=destination || g_map[k-1].size!=size || g_map[k-1].state!=0x0d){regs[0]=0xd401;return regs[0];}
+        regs[0]=native_transfer_unmap(regs[0],destination,size);if(!regs[0])map_del(k-1);return regs[0];
+    }
     case 0x01: {  // SetHeapSize(out_addr*, size)  → x1 = heap base
         size_t size = regs[1];
         if (size > g_heap_cap) { LOG("SetHeapSize OOM: req %#zx > cap %#zx", size, g_heap_cap); regs[0] = 0xD401; return 0; }
