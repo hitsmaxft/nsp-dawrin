@@ -50,6 +50,14 @@ Machine code alone does not establish all texture dimensions, image formats, ver
 
 The example identifier and values are synthetic. Allowed fields are `tex`, `img`, `attr`, `fout`, `local`, and `shared`, matching the offline translator job schema. Facts cannot replace code paths, keys or compiler options. `complete` is the provider's assertion, not independently verified coverage. Missing metadata is recorded in `facts-report.json`; translator assumptions also appear in reflection notes. The current asset adapter does not yet extract these facts. Producing MSL with defaults does not prove correct rendering.
 
+First-use capture also recognizes revision-one raw compute controls. The
+`formats.nvn.compute_descriptor` parser validates the control magic, revision,
+stage, workgroup dimensions and shared-memory extent. Compute instructions
+start at byte zero, without a graphics SPH; constant data remains a separate
+region. Conflicting supplied facts are rejected. Other control revisions need a
+separate parser or explicit metadata, and static asset scanning remains limited
+to its documented graphics layouts.
+
 ## Cache and runtime contract
 
 The conversion chain hashes pipeline sources, binding implementation, actual translator DLLs, the SPIRV-Cross executable, conversion options, and external facts. The translator verifies its embedded source fingerprint before processing jobs. Changed tools or metadata select a new `translated/<chain>` and `metal/b-<chain>` directory. The launcher supplies that same identity to the native loader, which rejects mismatched reflection.

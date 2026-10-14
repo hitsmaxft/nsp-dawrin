@@ -19,6 +19,36 @@ def capture(root,stage=1):
 
 
 class ShaderJobTests(unittest.TestCase):
+    def test_raw_compute_descriptor_and_metadata_conflicts(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            control=bytearray(0x880);code=bytes(0x180)
+            struct.pack_into('<II',control,0,0x98761234,1)
+            struct.pack_into('<II',control,0x700,0x100,len(code))
+            struct.pack_into('<I',control,0x714,5)
+            struct.pack_into('<4I',control,0x748,4,8,2,2048)
+            def publish():
+                key=hashlib.sha256(control).hexdigest()[:16]
+                (root/(key+'.control')).write_bytes(control)
+                (root/(key+'.code')).write_bytes(code)
+                return key
+            key=publish();jobs,failures=prepare(root,'chain',key)
+            self.assertFalse(failures)
+            self.assertEqual(jobs[0]['stage'],'cs')
+            self.assertEqual(jobs[0]['local'],[4,8,2])
+            self.assertEqual(jobs[0]['shared'],2048)
+            self.assertEqual(Path(jobs[0]['code']).read_bytes(),code[:0x100])
+            self.assertEqual(jobs[0]['c1'],code[0x100:].hex())
+            with self.assertRaisesRegex(ValueError,'conflicts'):
+                prepare(root,'chain',key,runtime_facts=dict(stage='ps'))
+            with self.assertRaisesRegex(ValueError,'conflicts'):
+                prepare(root,'chain',key,runtime_facts=dict(stage='cs',values=dict(local=[1,1,1])))
+            for offset,value,error in ((4,2,'layout'),(0x748,0,'dimensions'),(0x754,65540,'extent')):
+                original=control[offset:offset+4]
+                struct.pack_into('<I',control,offset,value)
+                with self.assertRaisesRegex(ValueError,error):prepare(root,'chain',publish())
+                control[offset:offset+4]=original
+
     def test_requested_capture_ignores_unrelated_malformed_capture(self):
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder);key=capture(root)

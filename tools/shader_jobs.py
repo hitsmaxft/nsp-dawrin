@@ -6,6 +6,7 @@ import re
 import struct
 from nsp_runtime.cache import atomic_write
 from nsp_runtime.facts import JsonFactsProvider
+from nsp_runtime.formats.nvn import compute_descriptor
 
 
 def prepare(directory,chain,key=None,variant=None,runtime_facts=None):
@@ -20,21 +21,28 @@ def prepare(directory,chain,key=None,variant=None,runtime_facts=None):
         identity=variant or path.stem
         try:
             control=path.read_bytes();code=path.with_suffix('.code').read_bytes()
-            if len(control)!=0x880 or len(code)<0x80 or code[:4]!=bytes.fromhex('78563412'):
+            if len(control)!=0x880 or len(code)<0x80:
                 raise ValueError('Unsupported shader capture layout')
+            compute=compute_descriptor(control,code)
             if hashlib.sha256(control).hexdigest()[:16]!=path.stem:raise ValueError('Capture control hash differs from filename')
             constant,size=struct.unpack_from('<II',control,0x700)
             if not 0x80<=constant<=size==len(code):raise ValueError('Invalid shader code extent')
             kind=(struct.unpack_from('<I',code,0x30)[0]>>10)&15
             row=external.rows.get(path.stem,{})
-            stage=(runtime_facts or {}).get('stage',row.get('stage',{1:'vs',5:'ps'}.get(kind)))
+            stage=(runtime_facts or {}).get('stage',row.get('stage','cs' if compute else {1:'vs',5:'ps'}.get(kind)))
             if stage not in ('vs','ps','cs'):raise ValueError(f'Unsupported shader stage: {kind}')
+            if compute and stage!='cs':raise ValueError('Compute descriptor conflicts with requested stage')
             fact=external.facts_for(path.stem,stage)
             values=dict(fact.values)
             for name,entries in (runtime_facts or {}).get('values',{}).items():
                 values[name]={**values.get(name,{}),**entries} if isinstance(entries,dict) else entries
+            if compute:
+                for name,value in compute.items():
+                    if name in values and values[name]!=value:raise ValueError('Compute descriptor conflicts with supplied metadata')
+                    values[name]=value
             validate_facts(values,stage)
-            code_offset=row.get('code_offset',0x30 if stage!='cs' else None)
+            code_offset=row.get('code_offset',0 if compute else 0x30 if stage!='cs' else None)
+            if compute and code_offset!=0:raise ValueError('Raw compute entry must start at offset zero')
             if code_offset is None:raise ValueError('Missing compute code offset metadata')
             if type(code_offset) is not int or not 0<=code_offset<constant or code_offset%8:raise ValueError('Invalid shader code offset')
             dst=out/(identity+'.maxwell');atomic_write(dst,code[code_offset:constant])

@@ -4,6 +4,25 @@ import struct
 from ..interfaces import DecodeResult, ShaderBlob, ShaderProgram
 
 
+def compute_descriptor(control, code):
+    """Decode revision-one raw compute metadata, without a graphics SPH."""
+    if code[:4] == bytes.fromhex('78563412'):
+        return None
+    if len(control) != 0x880 or len(code) < 0x80:
+        raise ValueError('Unsupported shader capture layout')
+    magic, revision = struct.unpack_from('<II', control)
+    stage = struct.unpack_from('<I', control, 0x714)[0]
+    if (magic, revision, stage) != (0x98761234, 1, 5):
+        raise ValueError('Unsupported raw compute control layout')
+    local = list(struct.unpack_from('<III', control, 0x748))
+    shared = struct.unpack_from('<I', control, 0x754)[0]
+    if any(not 1 <= n <= 1024 for n in local) or local[0]*local[1]*local[2] > 1024:
+        raise ValueError('Invalid compute workgroup dimensions')
+    if shared > 65536 or shared % 4:
+        raise ValueError('Invalid compute shared-memory extent')
+    return dict(local=local, shared=shared)
+
+
 class NvnBlobDecoder:
     format = 'nvn-blob'
 

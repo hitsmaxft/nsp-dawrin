@@ -27,7 +27,9 @@ available for format-specific facts. Runtime observations override the same
 explicitly observed slots in external metadata.
 
 Vertex and fragment captures with the validated layout work automatically.
-Compute translation and Metal generation accept an external descriptor with
+Revision-one raw compute captures derive workgroup dimensions, shared memory
+and the code entry from the validated control descriptor. Translation and Metal
+generation also accept an external descriptor with
 `stage: "cs"`, `code_offset`, and explicit `values.local` and `values.shared`.
 Unknown compute control layouts cannot yet supply these automatically and fail
 with a metadata diagnostic. Geometry/tessellation and resource descriptor arrays
