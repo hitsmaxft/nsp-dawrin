@@ -56,6 +56,32 @@ def prepare(directory,chain,key=None,variant=None,runtime_facts=None):
     return jobs,failures
 
 
+def prepare_observed(directory, chain):
+    """Rebuild observed variants from captures and facts, never from old binaries."""
+    directory = Path(directory)
+    previous = json.loads((directory/'jobs.json').read_text())
+    requests = {}
+    for job in previous:
+        key, source = job['key'], job['source_key']
+        if not all(isinstance(value, str) and re.fullmatch('[0-9a-f]{16}', value)
+                   for value in (key, source)):
+            raise ValueError('Invalid observed shader identity')
+        facts = json.loads((directory/(key+'.facts.json')).read_text())
+        identity = json.dumps(dict(capture=source, facts=facts), sort_keys=True,
+                              separators=(',', ':'), ensure_ascii=False).encode()
+        if hashlib.sha256(identity).hexdigest()[:16] != key:
+            raise ValueError('Observed shader facts do not match their variant identity')
+        requests[key] = (source, facts)
+    if not requests:
+        raise ValueError('No observed shader variants are available')
+    jobs, failures = [], {}
+    for key, (source, facts) in requests.items():
+        selected, failed = prepare(directory, chain, source, key, facts)
+        jobs.extend(selected)
+        failures.update(failed)
+    return jobs, failures
+
+
 def validate_facts(values,stage):
     allowed={'tex','img','attr','fout','local','shared'}
     if set(values)-allowed:raise ValueError('Unknown shader facts field')

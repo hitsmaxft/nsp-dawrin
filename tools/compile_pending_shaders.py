@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import sys
 from nsp_runtime.backends import MaxwellSpirvBackend, MetalSourceBackend
-from shader_jobs import prepare
+from shader_jobs import prepare, prepare_observed
 from nsp_runtime.cache import TOOLS, atomic_write, chain_version
 
 
@@ -17,7 +17,11 @@ def main():
     parser.add_argument('--key')
     parser.add_argument('--source-key')
     parser.add_argument('--facts', type=Path)
+    parser.add_argument('--observed', action='store_true',
+                        help='Rebuild all previously observed variants from captured code and validated runtime facts')
     args = parser.parse_args()
+    if args.observed and (args.key or args.source_key or args.facts):
+        parser.error('--observed cannot be combined with a single-variant request')
     directory = args.directory.resolve()
     directory.mkdir(parents=True, exist_ok=True)
     with (directory/'compile.lock').open('w') as lock:
@@ -25,8 +29,11 @@ def main():
         cross = shutil.which('spirv-cross') or '/opt/homebrew/bin/spirv-cross'
         chain = chain_version(directory, cross)
         facts=json.loads(args.facts.read_text()) if args.facts else None
-        selected,capture_failures=prepare(directory,chain,args.source_key or args.key,
-                                          args.key if args.source_key else None,facts)
+        if args.observed:
+            selected, capture_failures = prepare_observed(directory, chain)
+        else:
+            selected,capture_failures=prepare(directory,chain,args.source_key or args.key,
+                                              args.key if args.source_key else None,facts)
         translated = MaxwellSpirvBackend().translate(selected, directory/'translated'/chain)
         atomic_write(directory/'translation-failures.json', json.dumps(translated.failed, indent=2))
         built = MetalSourceBackend(chain, cross).build(directory, args.key)

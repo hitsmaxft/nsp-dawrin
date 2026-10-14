@@ -6,7 +6,7 @@ import sys
 import tempfile
 import unittest
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools'))
-from shader_jobs import prepare,validate_facts
+from shader_jobs import prepare,prepare_observed,validate_facts
 
 
 def capture(root,stage=1):
@@ -49,6 +49,28 @@ class ShaderJobTests(unittest.TestCase):
             (root/'shader-facts.json').write_text(json.dumps({key:row}))
             jobs,_=prepare(root,'chain',key)
             self.assertEqual(jobs[0]['stage'],'cs');self.assertEqual(jobs[0]['local'],[8,4,1])
+
+    def test_observed_variants_rebuild_from_validated_inputs_for_new_chain(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder); source = capture(root); identities = []
+            for kind in ('cube', '2d'):
+                facts = dict(stage='vs', values=dict(tex={'0': kind}))
+                encoded = json.dumps(dict(capture=source, facts=facts), sort_keys=True,
+                                     separators=(',', ':')).encode()
+                key = hashlib.sha256(encoded).hexdigest()[:16]; identities.append(key)
+                (root/(key+'.facts.json')).write_text(json.dumps(facts))
+                prepare(root, 'old-chain', source, key, facts)
+            jobs, failures = prepare_observed(root, 'new-chain')
+            self.assertFalse(failures)
+            self.assertEqual({job['key'] for job in jobs}, set(identities))
+            self.assertEqual({job['tex']['0'] for job in jobs}, {'cube', '2d'})
+            self.assertTrue(all(Path(job['code']).parent == root/'translated/new-chain' for job in jobs))
+            self.assertTrue(all(not Path(job['code']).with_suffix('.spv').exists() for job in jobs))
+            before = (root/'jobs.json').read_bytes()
+            (root/(identities[0]+'.facts.json')).write_text(json.dumps(dict(stage='ps', values={})))
+            with self.assertRaisesRegex(ValueError, 'variant identity'):
+                prepare_observed(root, 'another-chain')
+            self.assertEqual((root/'jobs.json').read_bytes(), before)
 
     def test_invalid_facts_rejected_before_translation(self):
         for values in ({'attr':{'32':'float'}},{'tex':{'0':'invalid'}},{'code':'path'},

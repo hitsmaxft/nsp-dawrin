@@ -130,3 +130,11 @@ model initialization stall observed on the validation host.
 Controller-support requests select the existing combined keyboard/controller
 at player index zero. Requests requiring multiple players or an unsupported
 controller style return failure; no additional players are fabricated.
+
+After a compiler or graphics change updates the cache version, run
+`python tools/compile_pending_shaders.py /path/to/shaders --observed` to rebuild
+previously observed variants in batches. Each variant's identity is checked
+against its captured source key and runtime facts. Code is extracted again and
+translated under the current chain; old shader binaries are not copied across
+versions. This covers observed states only. New scenes can still introduce new
+variants, and Metal compilation and rendering remain separate checks.
