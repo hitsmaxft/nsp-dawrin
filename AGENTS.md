@@ -1,9 +1,71 @@
-# Project conventions
+# Project orientation
 
-- The project name is `nsp-dawrin`.
-- Write new code, comments, diagnostics, and documentation in English.
-- Keep project branding neutral. Preserve required third-party license notices and exact interoperability symbols.
-- Never add application packages, game assets, keys, firmware, saves, screenshots, or captured shader data to the source tree.
-- Keep runtime data and generated build caches outside the source directory. Reuse the shared build directory.
-- Prefer bounded CLI and local API validation. Use OCR for interaction and inspect images only when text cannot resolve a rendering issue.
-- Distinguish virtual input tests from tests with connected physical devices.
+`nsp-dawrin` is an experimental native ARM64 compatibility runtime for macOS 26+. Guest CPU instructions run natively after NSO rewriting. The vendored shader library translates GPU instructions offline; it is not a CPU emulator. Unicorn is used only in isolated instruction tests.
+
+Write code, comments, diagnostics and documentation in English. Keep the README focused on installation, usage and features. Put implementation caveats and agent guidance here or in technical docs. New project work uses GPL-3.0-or-later. Preserve upstream MIT notices and third-party licenses.
+
+## Ownership and data
+
+Keep source branding neutral; preserve required ABI symbol spellings and attribution. Never commit packages, assets, firmware, keys, saves, screenshots or captured shaders. Runtime data belongs outside the checkout. Treat package paths and local key locations as private. Do not print secret values. Preserve saves and the user's original packages during debugging.
+
+Inspect processes and mounts before cleanup. A work directory can contain live network mounts: never recursively delete its parent. Reuse `../work/build/obj`; keep Python environments and compiler caches outside the source tree where possible. Retain the built translator needed by the runtime. Clean only identified inactive generated artifacts, not entire workspaces or shared caches.
+
+## Source map
+
+| Module | Responsibility |
+| --- | --- |
+| `tools/package.py` | Base NSP index, local key handling, executable preparation, bounded resource reads |
+| `src/macos/package_fs.m` | Native random-access reads from package resources |
+| `tools/patch_nso.py` | x18/TLS virtualization, guest SVC/timer gates, branch rewriting |
+| `src/host/loader.c` | Module layout, relocation, symbol lookup and forced host imports |
+| `src/host/hle_*.c` | Guest service implementations and host bridges |
+| `src/macos/host.c` | Native entry, process setup and fault reporting |
+| `src/macos/controller.*`, `input.c`, `window.m` | Controller normalization, guest input sampling and mouse touch |
+| `src/gfx/nvn/hle_nvn.c` | NVN ABI and command recording |
+| `src/gfx/nvn/nvn_mtl.m` | Metal replay, shader loading, resource binding and pipeline state |
+| `tools/nsp_runtime/` | Engine, decoder, facts, translation and cache contracts |
+| `tools/control.py`, `ocr.py`, `src/macos/control.c` | Local control socket, OCR regions and runtime status |
+
+Read [docs/interfaces.md](docs/interfaces.md) before extending engine or shader support. Register engines explicitly in `Registry`. Engine adapters consume `ResourceReader` and emit format-tagged `ShaderBlob` records. GPU decoders validate those records. `ShaderFactsProvider` supplies metadata that instructions alone cannot establish. Translation and host shader generation have separate backend protocols. Do not add game-name conditionals to the common pipeline.
+
+## Bring-up workflow for another application
+
+1. Identify the package revision and existing session. Check available disk space, mounted package path, key generation and active runner before preparation. Use the supplied local keys; missing decryption keys are a package prerequisite, not a shader bug.
+2. Run package preparation and check resource counts. Only executable modules and an index should be materialized; resource payloads stay in the package. Compare bounded native reads against independent reference bytes when changing the filesystem layer.
+3. Rewrite every executable module actually present. The loader supports `main`, optional subsdk modules and `sdk`, with a finite module-count guard. An unsupported instruction must stop rewriting. Inspect the instruction and surrounding data flow, implement a generic transformation, and prove argument, register, stack, flag and return-address semantics with focused instruction tests. Never bypass the rewriter assertion or patch a title offset blindly.
+4. Select or implement an engine adapter. Run `scan_shaders.py` and inspect `scan-report.json`. Validate control/code extents and compare key sets on regressions. Empty program tables are valid; unknown layouts and stages must remain visible.
+5. Run `compile_pending_shaders.py`. Review `translation-failures.json`, `binding-failures.json`, `facts-report.json` and `build-report.json`. Convert resource reflection to explicit slots; a storage buffer is not an ordinary uniform buffer. Validate stage-specific driver tables and reject unknown mappings.
+6. Compile generated MSL with the native Metal API before runtime acceptance. Launch one session at a time with a bounded timeout and a unique control socket/log path. Check `status` for increasing frames, package reads, shader loads and zero shader failures. Use OCR to confirm application state. One loading frame is not proof of a working menu.
+7. Exercise input and a basic menu transition through CLI/API. If testing save/load, preserve existing saves and verify a successful in-application save followed by reload; an initialized save file or a button click alone is insufficient.
+8. Record separate outcomes for decryption, rewrite, scanning, translation, actual Metal compilation, shader loading, rendered frames, interaction and save/load. State unresolved failures with their log evidence. Do not equate MSL generation with successful rendering or general compatibility.
+
+## Shader cache rules
+
+The chain identity hashes pipeline source, binding source, actual compiler DLLs, SPIRV-Cross, options and external facts. The translator checks its embedded source fingerprint. Python receipts track job/code inputs; host artifacts track SPIR-V, reflection and constants. The launcher and native loader must use the same chain. Never copy an old cache into a new chain directory merely to make a test pass.
+
+MSL is compiled by the installed Metal framework. The system's compilation cache is distinct from this project's conversion cache. Pipeline states also depend on runtime state. Preserve observed first-use order for future warm-up work. Use bounded batches and modest concurrency; prefer cached CLI/API checks over repeated screenshots or full rescans. A shader capture can add runtime variants that a static engine scan did not find.
+
+## Known gaps and diagnostic boundaries
+
+- Package handling currently covers supported base NSP plain/CTR sections. XCI, personalized tickets and update merging require separate implementations.
+- The asset adapter currently understands serialized assets from one engine family. GPU decoding handles validated vertex/fragment layouts. Additional engines and compute/tessellation coverage need adapters or decoder/backend work.
+- Supplemental texture/image/vertex facts are not yet extracted automatically. Default assumptions are reported, but successful translation with missing facts does not establish correct rendering.
+- Guest exception unwinding depends on valid module metadata and matching guest frame descriptions. Diagnose the first failure, not only the final abort.
+- Some inherited graphics optimizations and diagnostics retain assumptions from the upstream application. Audit them before enabling optimizations on another application; the launcher disables the optional tile-specific path by default.
+- Input currently exposes one controller and one touch contact. Motion, vibration and simultaneous multiplayer need implementation. Virtual controller and native mouse tests do not establish behavior on physical controllers.
+- OCR reports text rectangles, not semantic UI controls. IDs expire and must not be reused across process restarts.
+- Unbounded play requires an explicit `DM_TIMEOUT=0`; use finite timeouts for automated bring-up and terminate only the process owned by the current test.
+
+## Verification and publication
+
+Run `make -j4` for the native host and `dotnet build tools/shader_translate -c Release` when changing translator code. Use the existing external Python environment for `python -m unittest discover -s tests -p 'test_*.py' -v`. Instruction tests require Unicorn; scanner tests require the dependencies in `requirements.txt`. Use targeted native harnesses in `tests/` for controller, mouse, package, unwind and Metal checks.
+
+Run only checks relevant to the change, then stop repeating successful checks unless evidence changes. Keep game-specific validation records outside the repository. Stage explicit source paths, inspect the diff for private data and generated files, and verify repository visibility and remote SHA after an authorized push. If the user requests unsigned commits, use `git -c commit.gpgsign=false commit`; do not alter global signing preferences.
+
+## Attribution when adding dependencies
+
+Record each adopted library, copied algorithm, header, generated definition, and external build/test tool in `docs/DEPENDENCIES.md` in the same commit that introduces it. Include author, source URL, version or revision, local location, purpose, license, and any local modifications. Preserve complete notices alongside vendored code or under `LICENSES/`; a README thank-you is not a substitute for them. Keep concise acknowledgments in the README.
+
+Audit the actual build graph, including Python and NuGet transitive dependencies, when packaging a binary release. Ship the applicable license texts and notices with bundled components. Distinguish original upstream work, local adaptations, and independent contributors; do not copy another author's apology or claim an upstream contributor worked directly on this project. Do not label an adapted subset as unmodified.
+
+After completing and validating a coherent feature or fix, make one focused unsigned commit with its relevant checks. Stage explicit paths; keep unrelated work for its own commit. Commit attribution and license changes independently from runtime features.
