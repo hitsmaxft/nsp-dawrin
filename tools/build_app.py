@@ -11,6 +11,7 @@ contents = app / "Contents"
 macos = contents / "MacOS"
 macos.mkdir(parents=True, exist_ok=True)
 shutil.copy2(root.parent / "work/bin/nsp-dawrin", macos / "nsp-dawrin")
+shutil.copy2(root.parent / "work/bin/crash-report", macos / "crash-report")
 notices = contents / "Resources" / "Licenses"
 notices.mkdir(parents=True, exist_ok=True)
 for name in ("LICENSE", "COPYING"):
@@ -35,7 +36,8 @@ launcher = macos / "launcher"
 launcher.write_text("#!/bin/sh\nset -eu\n"
     "export DM_WINDOW=1 DM_TIMEOUT=${DM_TIMEOUT:-0} DM_AUDIO=${DM_AUDIO:-1}\n"
     f"export NATIVE_HOST={shlex.quote(str(macos / 'nsp-dawrin'))}\n"
-    f"exec {shlex.quote(str(root / 'run.sh'))} \"$@\"\n")
+    f"export NSP_CRASH_REPORTER={shlex.quote(str(macos / 'crash-report'))}\n"
+    f"exec python3 {shlex.quote(str(root / 'tools/run_with_report.py'))} -- {shlex.quote(str(root / 'run.sh'))} \"$@\"\n")
 launcher.chmod(0o755)
 subprocess.run(["codesign", "--force", "--deep", "--sign", "-", str(app)], check=True)
 print(app)

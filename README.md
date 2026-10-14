@@ -1,6 +1,6 @@
 # nsp-dawrin
 
-A native ARM64 compatibility runtime for macOS. Guest CPU instructions execute directly after rewriting, with local host services and an NVN-to-Metal graphics backend.
+A native launcher and ARM64 compatibility runtime for macOS. Guest CPU instructions execute directly after rewriting, with local host services and an NVN-to-Metal graphics backend.
 
 - Launch NSP packages with resources read directly from the package.
 - Prepare shaders through a modular Maxwell → SPIR-V → MSL pipeline.
@@ -39,6 +39,12 @@ GAME_DIR=/path/cache DM_WINDOW=1 DM_TIMEOUT=0 ./run.sh
 ```
 
 The app bundle uses the same `GAME_DIR` and local checkout. `DOTNET` can select an SDK executable outside PATH.
+
+Package preparation currently supports base NSP packages. XCI, update merging,
+and DLC loading are not implemented yet. The app bundle is a launcher for the
+local development environment, not a standalone converted application.
+The current development focus is launching application packages and their DLC;
+standalone application export and installers are deferred.
 
 ## Startup check
 
@@ -108,6 +114,21 @@ python tools/control.py shot /path/frame.png
 ```
 
 `state` lists recognized text regions and their touch coordinates. Use the returned ID with `click`. Runtime status includes frame count, shader loading, input state, and direct package reads.
+
+## Crash reports
+
+Launching through the app or `tools/launch.py` opens a report window after an
+unexpected runtime exit. Preview the diagnostics and choose **Open GitHub Draft**
+to report the failure, or **Copy Agent Prompt** to hand it to a coding agent.
+Reports can be reopened from **Help → Latest Crash Report…**.
+
+For an existing prepared session with crash reporting:
+
+```sh
+GAME_DIR=/path/cache DM_WINDOW=1 DM_TIMEOUT=0 python tools/run_with_report.py
+```
+
+See [Crash reporting](docs/crash-reporting.md) for CLI options and report contents.
 
 ## Acknowledgments
 

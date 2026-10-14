@@ -11,7 +11,11 @@ LIBS := -framework Cocoa -framework QuartzCore -framework Metal -framework Image
 -include $(OBJ:.o=.d)
 
 .PHONY: all
-all: $(OUT) $(OCR_BIN)/switch-ocr $(OCR_BIN)/ocr-mask $(OCR_BIN)/warm-metal
+all: $(OUT) $(OCR_BIN)/switch-ocr $(OCR_BIN)/ocr-mask $(OCR_BIN)/warm-metal $(OCR_BIN)/crash-report
+
+$(OCR_BIN)/crash-report: tools/crash_report.m
+	@mkdir -p $(OCR_BIN)
+	$(CC) -fobjc-arc $< -framework Cocoa -o $@
 
 $(OCR_BIN)/warm-metal: tools/warm_metal.m
 	@mkdir -p $(OCR_BIN)
@@ -36,4 +40,4 @@ $(BUILD)/%.o: % Makefile
 
 .PHONY: clean
 clean:
-	rm -f $(OUT) $(OBJ) $(OBJ:.o=.d) $(OCR_BIN)/switch-ocr $(OCR_BIN)/ocr-mask $(OCR_BIN)/warm-metal
+	rm -f $(OUT) $(OBJ) $(OBJ:.o=.d) $(OCR_BIN)/switch-ocr $(OCR_BIN)/ocr-mask $(OCR_BIN)/warm-metal $(OCR_BIN)/crash-report

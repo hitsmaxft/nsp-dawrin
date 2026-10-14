@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
         }
         NSWindow *game=NSApp.windows.firstObject;NSView *view=game.contentView;
         assert(game && [game.title isEqual:@"nsp-dawrin"]);
-        assert(NSApp.mainMenu.numberOfItems==3);
+        assert(NSApp.mainMenu.numberOfItems==4);
         assert([NSApp.mainMenu.itemArray[1].title isEqual:@"View"]);
         assert([NSApp.mainMenu.itemArray[2].title isEqual:@"Window"]);
         [view keyDown:key(game,6,NSEventTypeKeyDown)];[view keyDown:key(game,49,NSEventTypeKeyDown)];

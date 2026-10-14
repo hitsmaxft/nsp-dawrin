@@ -46,7 +46,7 @@ def main():
         print(cache)
         return
     env = dict(os.environ, GAME_DIR=str(cache), DM_WINDOW='1', DM_TIMEOUT='0', DM_AUDIO='1')
-    os.execve(str(tools.parent/'run.sh'), [str(tools.parent/'run.sh')], env)
+    os.execve(sys.executable, [sys.executable, str(tools/'run_with_report.py'), '--', str(tools.parent/'run.sh')], env)
 
 
 if __name__ == '__main__':

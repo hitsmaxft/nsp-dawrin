@@ -81,6 +81,36 @@ static void update_surface(void) {
 - (void)windowDidFailToEnterFullScreen:(NSWindow *)window {fullscreen_transition=NO;native_settings_update(@{@"fullscreen":@NO},nil);}
 - (void)windowDidFailToExitFullScreen:(NSWindow *)window {fullscreen_transition=NO;native_settings_update(@{@"fullscreen":@YES},nil);}
 - (void)showSettings:(id)sender {release_input();native_settings_show(game_window);}
+- (NSURL *)reportsDirectory {
+    const char *custom=getenv("NSP_REPORT_ROOT");
+    return custom ? [NSURL fileURLWithPath:@(custom)] :
+        [[NSFileManager.defaultManager URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask].firstObject
+            URLByAppendingPathComponent:@"nsp-dawrin/CrashReports"];
+}
+- (void)showCrashReports:(id)sender {
+    NSURL *directory=[self reportsDirectory];NSError *error=nil;
+    if (![NSFileManager.defaultManager createDirectoryAtURL:directory withIntermediateDirectories:YES
+        attributes:@{NSFilePosixPermissions:@0700} error:&error]) { [NSApp presentError:error];return; }
+    [NSWorkspace.sharedWorkspace openURL:directory];
+}
+- (void)showLatestCrash:(id)sender {
+    NSURL *directory=[self reportsDirectory];
+    NSArray *names=[[NSFileManager.defaultManager contentsOfDirectoryAtPath:directory.path error:nil] sortedArrayUsingSelector:@selector(compare:)];
+    NSURL *report=nil;
+    for (NSString *name in names.reverseObjectEnumerator) {
+        NSURL *candidate=[[directory URLByAppendingPathComponent:name] URLByAppendingPathComponent:@"report.json"];
+        if ([NSFileManager.defaultManager fileExistsAtPath:candidate.path]) { report=candidate;break; }
+    }
+    if (!report) {
+        NSAlert *alert=[NSAlert new];alert.messageText=@"No crash reports yet";
+        alert.informativeText=@"Reports appear here after an unexpected exit from a supervised session.";
+        [alert beginSheetModalForWindow:game_window completionHandler:nil];return;
+    }
+    NSString *binary=[[NSProcessInfo.processInfo.arguments[0] stringByDeletingLastPathComponent] stringByAppendingPathComponent:@"crash-report"];
+    NSTask *task=[NSTask new];task.executableURL=[NSURL fileURLWithPath:binary];task.arguments=@[report.path];
+    NSError *error=nil;if (![task launchAndReturnError:&error]) [NSApp presentError:error];
+}
+
 - (void)toggleFullscreen:(id)sender {
     if (!fullscreen_transition) [game_window toggleFullScreen:nil];
 }
@@ -137,6 +167,11 @@ static void build_menu(void) {
     NSMenuItem *window=[[NSMenuItem alloc] initWithTitle:@"Window" action:NULL keyEquivalent:@""];[bar addItem:window];window.submenu=[[NSMenu alloc] initWithTitle:@"Window"];
     NSMenuItem *minimize=menu_item(window.submenu,@"Minimize",@selector(performMiniaturize:),@"m",nil);minimize.target=game_window;
     NSApp.windowsMenu=window.submenu;
+    NSMenuItem *help=[[NSMenuItem alloc] initWithTitle:@"Help" action:NULL keyEquivalent:@""];[bar addItem:help];
+    help.submenu=[[NSMenu alloc] initWithTitle:@"Help"];
+    menu_item(help.submenu,@"Latest Crash Report…",@selector(showLatestCrash:),@"",nil);
+    menu_item(help.submenu,@"Open Crash Reports Folder",@selector(showCrashReports:),@"",nil);
+    NSApp.helpMenu=help.submenu;
 }
 
 void *front_metal_layer(void) {return (__bridge void *)game_layer;}

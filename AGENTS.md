@@ -4,6 +4,11 @@
 
 Write code, comments, diagnostics and documentation in English. Keep the README focused on installation, usage and features. Put implementation caveats and agent guidance here or in technical docs. New project work uses GPL-3.0-or-later. Preserve upstream MIT notices and third-party licenses.
 
+Prioritize the native launcher for application packages and associated DLC.
+Standalone converted application export and installer generation are deferred.
+Keep implemented package formats and content-loading capabilities distinct from
+the roadmap; XCI and DLC loading are currently implementation gaps.
+
 ## Ownership and data
 
 Keep source branding neutral; preserve required ABI symbol spellings and attribution. Never commit packages, assets, firmware, keys, saves, screenshots or captured shaders. Runtime data belongs outside the checkout. Treat package paths and local key locations as private. Do not print secret values. Preserve saves and the user's original packages during debugging.
@@ -26,6 +31,7 @@ Inspect processes and mounts before cleanup. A work directory can contain live n
 | `src/gfx/nvn/nvn_mtl.m` | Metal replay, shader loading, resource binding and pipeline state |
 | `tools/nsp_runtime/` | Engine, decoder, facts, translation and cache contracts |
 | `tools/control.py`, `ocr.py`, `src/macos/control.c` | Local control socket, OCR regions and runtime status |
+| `tools/run_with_report.py`, `crash_report.py`, `crash_report.m` | Session supervision, shareable diagnostics and independent report UI |
 
 Read [docs/interfaces.md](docs/interfaces.md) before extending engine or shader support. Register engines explicitly in `Registry`. Engine adapters consume `ResourceReader` and emit format-tagged `ShaderBlob` records. GPU decoders validate those records. `ShaderFactsProvider` supplies metadata that instructions alone cannot establish. Translation and host shader generation have separate backend protocols. Do not add game-name conditionals to the common pipeline.
 
@@ -62,6 +68,16 @@ MSL is compiled by the installed Metal framework. The system's compilation cache
 Run `make -j4` for the native host and `dotnet build tools/shader_translate -c Release` when changing translator code. Use the existing external Python environment for `python -m unittest discover -s tests -p 'test_*.py' -v`. Instruction tests require Unicorn; scanner tests require the dependencies in `requirements.txt`. Use targeted native harnesses in `tests/` for controller, mouse, package, unwind and Metal checks.
 
 Run only checks relevant to the change, then stop repeating successful checks unless evidence changes. Keep game-specific validation records outside the repository. Stage explicit source paths, inspect the diff for private data and generated files, and verify repository visibility and remote SHA after an authorized push. If the user requests unsigned commits, use `git -c commit.gpgsign=false commit`; do not alter global signing preferences.
+
+Before changing repository visibility, audit all reachable Git history as well as
+the current tree for secrets and application artifacts. Include remote refs,
+release assets and workflow artifacts. Report findings without printing secret
+values. Preserve dependency copyrights and complete license notices.
+
+Crash diagnostics use an explicit field allowlist; see
+[docs/crash-reporting.md](docs/crash-reporting.md). Never put raw log lines or
+package paths into an issue draft. Test previews offline without submitting
+issues, opening draft URLs or replacing the user's clipboard.
 
 ## Attribution when adding dependencies
 
