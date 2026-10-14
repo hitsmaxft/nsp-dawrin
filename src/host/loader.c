@@ -9,6 +9,7 @@
 #include <mach-o/getsect.h>
 #include <mach-o/ldsyms.h>
 #include "hle.h"
+#include "symbols.h"
 
 module_t g_mod[MAX_MOD];
 int g_nmod;
@@ -65,7 +66,7 @@ static void parse_dynamic(module_t *m) {
 static void *module_sym_linear(module_t *m, const char *name) {
     for (unsigned i = 1; i < m->nsym; i++) {
         const Elf64_Sym *s = &m->symtab[i];
-        if (s->st_shndx && !strcmp(m->strtab + s->st_name, name)) return m->base + s->st_value;
+        if (dm_symbol_exported(s) && !strcmp(m->strtab + s->st_name, name)) return m->base + s->st_value;
     }
     return NULL;
 }
@@ -76,7 +77,7 @@ static void build_symhash(module_t *m) {
     unsigned cap = 16; while (cap < m->nsym * 2) cap <<= 1;
     m->symh = calloc(cap, sizeof *m->symh); m->symh_mask = cap - 1;
     for (unsigned i = 1; i < m->nsym; i++) {
-        const Elf64_Sym *s = &m->symtab[i]; if (!s->st_shndx) continue;
+        const Elf64_Sym *s = &m->symtab[i]; if (!dm_symbol_exported(s)) continue;
         const char *nm = m->strtab + s->st_name;
         for (unsigned j = sym_hash(nm) & m->symh_mask;; j = (j + 1) & m->symh_mask) {
             if (!m->symh[j]) { m->symh[j] = i; break; }
@@ -215,7 +216,7 @@ static void relocate(module_t *m) {
                 v = (uint64_t)guest_sym(m->strtab+s->st_name);
                 if (!v) v = resolve_weak_import(m->strtab+s->st_name);
             } else
-            if (!v) v = s->st_shndx ? (uint64_t)m->base + s->st_value : resolve_sym(m, m->strtab + s->st_name);
+            if (!v) v = dm_symbol_binds_locally(s) ? (uint64_t)m->base + s->st_value : resolve_sym(m, m->strtab + s->st_name);
             if (type == R_AARCH64_JUMP_SLOT) { *where = v; cnt[2]++; }
             else { *where = v + r->r_addend; cnt[1]++; }       // ABS64 / GLOB_DAT
         }
