@@ -2,6 +2,7 @@
 // Online accounts (network service account / Nintendo Account authorization / tokens) are out of scope and uniformly return RES_FAIL; the async context's completion event fires immediately.
 // Environment switch: DM_NICK=nickname (default Player).
 #include "hle.h"
+#include "../macos/profile.h"
 
 typedef struct { uint64_t v[2]; } Uid;                 // nn::account::Uid, 16 bytes
 typedef struct { uint64_t v[3]; } UserHandle;          // nn::account::UserHandle, 24 bytes
@@ -39,6 +40,12 @@ HLE_FORCE("_ZN2nn7account11GetNicknameEPNS0_8NicknameERKNS0_3UidE", "用户昵�
     const char *e = getenv("DM_NICK");
     memset(nick, 0, 33); strncpy(nick, e ? e : "Player", 32);
     return RES_OK;
+}
+
+HLE_FORCE("_ZN2nn7account16LoadProfileImageEPmPvmRKNS0_3UidE", "Load generated local-user JPEG avatar", Result, h_acc_LoadProfileImage, size_t *written, void *buffer, size_t capacity, const Uid *uid) {
+    if (written) *written = 0;
+    if (!uid || memcmp(uid, &k_uid, sizeof k_uid)) return RES_FAIL;
+    return nsp_profile_image_copy(buffer, capacity, written) ? RES_OK : RES_FAIL;
 }
 
 // ---------- Online accounts: cut ----------
