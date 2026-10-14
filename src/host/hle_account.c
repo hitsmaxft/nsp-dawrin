@@ -75,3 +75,31 @@ HLE_FORCE("_ZN2nn7account42NintendoAccountAuthorizationRequestContext10GetIdToke
 int hle_account_is_local_uid(const void *uid) {
     return uid && !memcmp(uid, &k_uid, sizeof k_uid);
 }
+HLE_FORCE("_ZN2nn7account32IsNetworkServiceAccountAvailableEPbRKNS0_10UserHandleE", "Query network availability for a local user handle", Result, account_network_available, uint8_t *available, const UserHandle *user) {
+    if(available)*available=0;
+    if(!available||!user||user->v[2]!=HANDLE_MAGIC||memcmp(user->v,k_uid.v,sizeof k_uid))return RES_FAIL;
+    return RES_OK;
+}
+HLE_FORCE("_ZN2nn7account9CloseUserERKNS0_10UserHandleE", "Close local user handle for the const-reference SDK variant", void, account_close_const, UserHandle *user) {
+    if(user)h_acc_Close(user);
+}
+HLE_FORCE("_ZN2nn7account12GetUserCountEPi", "Count local profiles", Result, account_count, int *count) {
+    if(!count)return RES_FAIL;*count=1;return RES_OK;
+}
+static Result account_list(int *count,Uid *users,int capacity) {
+    if(count)*count=0;
+    if(!count||capacity<0||(capacity&&!users))return RES_FAIL;
+    if(capacity){users[0]=k_uid;*count=1;}return RES_OK;
+}
+HLE_FORCE("_ZN2nn7account12ListAllUsersEPiPNS0_3UidEi", "Enumerate local profiles", Result, account_list_all, int *count,Uid *users,int capacity) {return account_list(count,users,capacity);}
+HLE_FORCE("_ZN2nn7account18ListQualifiedUsersEPiPNS0_3UidEi", "Enumerate eligible local profiles", Result, account_list_qualified, int *count,Uid *users,int capacity) {return account_list(count,users,capacity);}
+HLE_FORCE("_ZN2nn7account16GetUserExistenceEPbRKNS0_3UidE", "Check local profile existence", Result, account_exists, uint8_t *exists,const Uid *uid) {
+    if(!exists)return RES_FAIL;*exists=hle_account_is_local_uid(uid);return RES_OK;
+}
+HLE_FORCE("_ZN2nn7account17GetLastOpenedUserEPNS0_3UidE", "Return the selected local profile", Result, account_last_user, Uid *uid) {
+    if(!uid)return RES_FAIL;*uid=k_uid;return RES_OK;
+}
+HLE_FORCE("_ZN2nn7account12AsyncContext7HasDoneEPb", "Report completed unavailable network request", Result, account_async_done, void *self,uint8_t *done) {
+    (void)self;if(!done)return RES_FAIL;*done=1;return RES_OK;
+}
+HLE_FORCE("_ZN2nn7account12AsyncContext6CancelEv", "Cancel an inactive network request", Result, account_async_cancel, void *self) {(void)self;return RES_OK;}
