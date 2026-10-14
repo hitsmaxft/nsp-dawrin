@@ -9,7 +9,7 @@ import time
 from ocr import recognize
 
 p = argparse.ArgumentParser(description=__doc__)
-p.add_argument("command", choices=["status", "press", "shot", "state", "click", "settings", "controller"])
+p.add_argument("command", choices=["status", "threads", "press", "shot", "state", "click", "settings", "controller"])
 p.add_argument("value", nargs="?")
 p.add_argument("--socket", default=f"/tmp/nsp-dawrin-{os.getuid()}.sock")
 p.add_argument("--game-dir", type=Path, default=Path(os.environ.get("GAME_DIR", "../work/session")))
@@ -103,8 +103,8 @@ elif args.command == "shot":
     if not args.value:
         p.error("shot requires a path")
     print(screenshot(args.value))
-elif args.command == "status":
-    print(send("status"))
+elif args.command in ("status", "threads"):
+    print(send(args.command))
 elif args.command == "settings":
     print(json.dumps(send("settings" + (" " + args.value if args.value else "")), indent=2))
 elif args.command == "controller":

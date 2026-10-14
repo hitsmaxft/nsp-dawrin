@@ -110,3 +110,10 @@ contents at map/unmap ownership boundaries. The runtime does not enforce source
 subpage protection; callers must respect the exclusive-ownership contract.
 Shared transfers with incompatible page offsets are rejected. These paths use
 the application-provided SDK and codecs; no media implementation is bundled.
+
+The local `control.py status` response includes `audio_callbacks` and
+`save_commits`. A callback proves host audio activity, not audible correctness;
+a commit may contain settings alone. Confirm a progress save in the application
+and reload it in a new process. `control.py threads` writes thread states to the
+private runtime log for diagnosing stalls without a debugger attachment. Raw
+thread dumps include guest addresses and must not enter shared crash reports.
