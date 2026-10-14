@@ -72,3 +72,6 @@ HLE_FORCE("_ZN2nn7account42NintendoAccountAuthorizationRequestContext34GetResult
 HLE_FORCE("_ZN2nn7account42NintendoAccountAuthorizationRequestContext10GetIdTokenEPmPcm", "授权令牌；恒失败", Result, h_acc_NaGetTok, void *self, uint64_t *n, char *buf, uint64_t sz) {
     (void)self; (void)buf; (void)sz; if (n) *n = 0; return RES_FAIL;
 }
+int hle_account_is_local_uid(const void *uid) {
+    return uid && !memcmp(uid, &k_uid, sizeof k_uid);
+}
