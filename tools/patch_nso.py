@@ -195,6 +195,18 @@ def site_br(ins, base, count):
         emit(B(here(), base + 4 * i))
     return start
 
+def site_blr(ins):
+    """Call through virtual x18 using ABI scratch x16; preserve the original LR."""
+    assert ins.mnemonic == 'blr' and ins.op_str == 'x18'
+    start = here()
+    emit(STUR(17, 31, -16))
+    emit(MRS_TPIDRRO(16)); emit_slot_addr(16, 17, 'K18'); emit(LDRX(16, 16))
+    emit(LDUR(17, 31, -16))
+    target = ins.address + 4
+    emit(ADRP(30, here(), target)); emit(ADDI(30, 30, target & 0xFFF))
+    emit(BR(16))
+    return start
+
 def site_sysreg_read(ins, kind):
     """mrs xN, tpidr_el0 / tpidrro_el0 → xN = thread slot value."""
     N = ins.bytes[0] & 31
@@ -398,6 +410,11 @@ def relative32_jump_range(insl, j):
             mask = q.operands[2].imm
             if 0 <= mask < 4096 and (mask & (mask + 1)) == 0: limit = mask + 1
             break
+        if q.mnemonic == 'mov' and len(q.operands) == 2 and writes(q, idx):
+            source = num(q.reg_name(q.operands[1].reg))
+            if source is None: break
+            idx = source
+            continue
         if q.mnemonic == 'cmp' and num(q.reg_name(q.operands[0].reg)) == idx and q.operands[1].type == ARM64_OP_IMM:
             for branch in insl[k+1:li]:
                 if branch.mnemonic in ('b.hi', 'b.hs'):
@@ -406,6 +423,7 @@ def relative32_jump_range(insl, j):
                 if branch.update_flags or branch.mnemonic.startswith('b'):
                     break
             break
+        if writes(q, idx): break
     if not limit or limit > 4096: return None
     address = None; low = 0
     for q in reversed(insl[:li]):
@@ -469,7 +487,8 @@ for a in sorted(kinds):
         if m == 'br': st = site_br(ins, *jumps[a]); stat('br')
         elif m in ('cbz', 'cbnz', 'tbz', 'tbnz'): st = site_cond(ins); stat('cond')
         elif m in ('adr', 'adrp'): st = site_pcrel(ins); stat('pcrel')
-        elif m in ('blr', 'ret', 'b', 'bl') or (m == 'ldr' and '[' not in ins.op_str): raise RuntimeError(f'{a:x} {m} {ins.op_str}')
+        elif m == 'blr': st = site_blr(ins); stat('blr')
+        elif m in ('ret', 'b', 'bl') or (m == 'ldr' and '[' not in ins.op_str): raise RuntimeError(f'{a:x} {m} {ins.op_str}')
         else: st = site_plain(ins); stat('plain')
     elif k == 'tpidr_r': st = site_sysreg_read(ins, 'KTLS'); stat(k)
     elif k == 'tpidrro_r': st = site_sysreg_read(ins, 'KTLR'); stat(k)
