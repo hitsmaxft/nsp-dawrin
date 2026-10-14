@@ -111,6 +111,9 @@ The independent host transport
 in `src/macos/ipc.c` adapts these layouts to bounded local service dispatch;
 libnx is not linked. Its complete ISC notice is retained in
 [LICENSES/libnx-ISC.txt](../LICENSES/libnx-ISC.txt).
+The controller-support result and argument header in `src/macos/input.c` also
+reference `applets/hid_la.h` and `services/hid.h` at the same revision. The host
+selects its existing local input device rather than launching a system applet.
 
 ## Media interface references
 
