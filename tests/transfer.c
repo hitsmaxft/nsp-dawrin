@@ -13,6 +13,7 @@ int main(void) {
     assert(!native_transfer_create(source,size,0,&handle));
     assert(native_transfer_create(source,size,0,&again));
     assert(native_transfer_map(handle,destination,size,3));
+    assert(native_transfer_map(handle,UINTPTR_MAX-4095,size,0));
     assert(!native_transfer_map(handle,destination,size,0));
     *(int *)source=73;assert(*(int *)destination==73);
     *(int *)destination=91;assert(*(int *)source==91);

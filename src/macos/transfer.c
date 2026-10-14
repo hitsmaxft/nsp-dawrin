@@ -46,7 +46,7 @@ uint32_t native_transfer_map(uint32_t handle,uintptr_t destination,size_t size,u
     pthread_mutex_lock(&lock);int slot=lookup(handle);uint32_t result=BAD_HANDLE;
     if(!slot)goto done;
     result=INVALID;
-    if(ranges[slot].mapped || size!=ranges[slot].size || permission!=ranges[slot].permission || !destination || (destination&4095) || size>UINTPTR_MAX-destination-vm_page_size)goto done;
+    if(ranges[slot].mapped || size!=ranges[slot].size || permission!=ranges[slot].permission || !destination || (destination&4095) || destination>UINTPTR_MAX-vm_page_size || size>UINTPTR_MAX-destination-vm_page_size)goto done;
     uintptr_t mask=vm_page_size-1,source=ranges[slot].address;
     int isolated_copy=(destination&mask)!=(source&mask);
     if(isolated_copy && permission!=0) {
