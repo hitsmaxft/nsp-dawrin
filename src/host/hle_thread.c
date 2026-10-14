@@ -55,6 +55,7 @@ static struct { int type; void *obj; } g_h[MAX_H];
 static pthread_key_t g_keythr;
 static uint64_t g_next_id = 0x51;
 static thr_t *g_wait;          // All waiting threads (lock / condition / address / synchronization)
+static void forget_service_event_handle(uint32_t handle);
 
 static uint32_t h_new(int type, void *obj) {     // Caller holds G
     for (int i = 1; i < MAX_H; i++) if (!g_h[i].type) { g_h[i].type = type; g_h[i].obj = obj; return 0x1000 + i; }
@@ -633,6 +634,7 @@ int svc_thread(int num, uint64_t *regs) {
         pthread_mutex_lock(&G);
         unsigned i = (uint32_t)regs[0] - 0x1000;
         if (i > 0 && i < MAX_H && (g_h[i].type == O_EVENT_R || g_h[i].type == O_EVENT_W)) {
+            if(g_h[i].type==O_EVENT_W)forget_service_event_handle((uint32_t)regs[0]);
             event_t *e = g_h[i].obj; if (--e->refs == 0) free(e);
             g_h[i].type = O_FREE; g_h[i].obj = NULL;
         } else if (i > 0 && i < MAX_H && g_h[i].type == O_THREAD) {
@@ -654,6 +656,16 @@ int svc_thread(int num, uint64_t *regs) {
 static struct { void *ev; uint32_t wh; } g_se[512];
 static int g_nse;
 static pthread_mutex_t g_se_lock = PTHREAD_MUTEX_INITIALIZER;
+void hle_unbind_system_event(void *ev) {
+    pthread_mutex_lock(&g_se_lock);
+    for(int i=0;i<g_nse;i++)if(g_se[i].ev==ev){g_se[i]=g_se[--g_nse];break;}
+    pthread_mutex_unlock(&g_se_lock);
+}
+static void forget_service_event_handle(uint32_t handle) {
+    pthread_mutex_lock(&g_se_lock);
+    for(int i=0;i<g_nse;i++)if(g_se[i].wh==handle){g_se[i]=g_se[--g_nse];break;}
+    pthread_mutex_unlock(&g_se_lock);
+}
 static uint32_t se_find(void *ev) {
     for (int i = 0; i < g_nse; i++) if (g_se[i].ev == ev) return g_se[i].wh;
     return 0;

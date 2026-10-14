@@ -145,7 +145,7 @@ HLE_FORCE("_ZN2nn5audio12OpenAudioOutEPNS0_8AudioOutEPNS_2os11SystemEventEPKcRKN
     if (slot < 0) die("AudioOut 同时打开超过 %d 个", AOMAX);
     g_aos[slot] = a;
     pthread_mutex_unlock(&g_aos_lock);
-    LOG("audio::OpenAudioOut %s 声道 %d %s", name ? name : "(默认)", ch, real_audio() ? "真出声" : "静音接收端");
+    LOG("Audio output opened: name=%s channels=%d sink=%s event=%p", name ? name : "default", ch, real_audio() ? "device" : "silent", ev);
     if (real_audio()) au_open(a);
     return RES_OK;
 }
@@ -173,6 +173,8 @@ HLE_FORCE("_ZN2nn5audio13CloseAudioOutEPNS0_8AudioOutE", "关闭音频输出", v
     atomic_store_explicit(&a->notify_run, 0, memory_order_release);
     dispatch_semaphore_signal(a->notify_sem);
     pthread_join(a->notify_th, NULL);
+    hle_unbind_system_event(a->event);
+    LOG("Audio output closed: event=%p",a->event);
     pthread_mutex_lock(&g_aos_lock);
     for (int i = 0; i < AOMAX; i++) if (g_aos[i] == a) g_aos[i] = NULL;
     pthread_mutex_unlock(&g_aos_lock);
