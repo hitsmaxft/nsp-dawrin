@@ -1,4 +1,4 @@
-"""CPU OCR with line bounds; no image contents leave this Mac."""
+"""Local OCR with line bounds; no image contents leave this Mac."""
 import csv
 import io
 import os

@@ -7,10 +7,11 @@ let url = URL(fileURLWithPath: CommandLine.arguments[1])
 let source = CGImageSourceCreateWithURL(url as CFURL, nil)!
 let image = CGImageSourceCreateImageAtIndex(source, 0, nil)!
 let request = VNRecognizeTextRequest()
-request.recognitionLevel = .fast
-request.revision = VNRecognizeTextRequestRevision1
-request.recognitionLanguages = ["en-US"]
-request.usesCPUOnly = true
+let languages = ProcessInfo.processInfo.environment["NSP_OCR_LANGUAGES"]?
+    .split(separator: ",").map(String.init) ?? ["zh-Hans", "en-US"]
+request.recognitionLevel = languages == ["en-US"] ? .fast : .accurate
+request.revision = VNRecognizeTextRequestRevision2
+request.recognitionLanguages = languages
 request.usesLanguageCorrection = false
 try VNImageRequestHandler(cgImage: image).perform([request])
 let rows: [[String: Any]] = (request.results ?? []).compactMap { item in

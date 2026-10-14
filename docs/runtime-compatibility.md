@@ -121,3 +121,8 @@ thread dumps include guest addresses and must not enter shared crash reports.
 OCR capture normally waits at most five seconds for the next rendered frame.
 During first-use compilation, use `control.py state --capture-timeout 30` to
 allow a longer bounded wait; `status` remains available while shaders compile.
+
+Vision OCR recognizes Simplified Chinese and English locally by default. Set
+`NSP_OCR_LANGUAGES=en-US` for fast English-only recognition, or provide a comma-
+separated list of supported Vision language tags. Revision 2 avoids the newer
+model initialization stall observed on the validation host.
