@@ -47,7 +47,8 @@ def chain_version(directory, cross=None):
     if not (compiler/'dmsh_xlate.dll').is_file():
         raise RuntimeError('Build the offline translator before preparing or launching shaders')
     files['spirv-cross'] = Path(cross)
-    for name in ('nvn_refl.h', 'nvn_refl.m', 'nvn_mtl.m', 'nvn_runtime_facts.inc', 'hle_nvn.c'):
+    for name in ('nvn_refl.h', 'nvn_refl.m', 'nvn_mtl.m', 'nvn_runtime_facts.inc', 'hle_nvn.c',
+                 'nvn_draw.h', 'nvn_obj.h'):
         files['binding/'+name] = TOOLS.parent/'src/gfx/nvn'/name
     facts = Path(directory)/'shader-facts.json'
     if facts.exists():
