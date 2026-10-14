@@ -144,3 +144,14 @@ under `src/third_party/h264-interface/`, alongside the upstream `NOTICE`.
 Only interface headers are vendored. The independent macOS decoder uses Apple's
 system VideoToolbox, CoreMedia and CoreVideo frameworks, following the
 [decompression session API](https://developer.apple.com/documentation/videotoolbox/vtdecompressionsession-api-collection).
+
+### OpenMAX buffer interface
+
+`src/third_party/openmax-interface` contains unmodified `OMX_Types.h`,
+`OMX_Index.h`, and `OMX_Core.h` from AOSP frameworks/native,
+[`android-7.1.2_r39`](https://android.googlesource.com/platform/frameworks/native/+/android-7.1.2_r39/include/media/openmax/).
+These PacketVideo and Khronos Group headers define media buffer ownership,
+flags, and timestamps. Apache-2.0 and the Khronos permission notice are retained
+in the headers, with the Apache license in the adjacent `NOTICE`.
+The queue adapter follows the public AOSP `SoftAVC` lifecycle and `List` ABI;
+its queue scheduling and native decoder integration are local implementations.
