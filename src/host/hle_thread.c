@@ -34,6 +34,7 @@ typedef struct thr {
     uint64_t entry, arg, stack_top; int prio, core; uint64_t mask;
     uint64_t born_ns, exit_ns; uint32_t born_tick, exit_tick;   // Time of creation / exit and the game tick at that time (for the state dump: did the job worker exit before the stall)
     int started, exited, cancel, paused;
+    int host_sleep;           // Lock-free sleep/yield region; transitions hold G.
     uint64_t *tsd;
     pthread_t pt; pthread_cond_t cv;
     // Current wait: kind 0=none 1=lock 2=condition 3=address 4=synchronization object
@@ -434,6 +435,8 @@ int svc_thread(int num, uint64_t *regs) {
     case 0x0B: {  // SleepThread(x0 ns); 0/-1/-2 = the various kinds of yield
         int64_t ns = (int64_t)regs[0];
         uint64_t t0 = g_flag.bootprof ? now_ns() : 0;
+        thr_t *sleeper = cur();
+        pthread_mutex_lock(&G); sleeper->host_sleep = 1; pthread_mutex_unlock(&G);
         if (ns > 0 && dm_detclock_enabled()) {
             uint64_t deadline = guest_ns() + (uint64_t)ns;
             while (guest_ns() < deadline) { struct timespec ts = {0, 1000000}; nanosleep(&ts, 0); }
@@ -443,6 +446,7 @@ int svc_thread(int num, uint64_t *regs) {
             if (me && me->handle == 0x1001) { uint64_t y0 = now_ns(); sched_yield(); g_main_yield_ns += now_ns() - y0; g_main_yield_n++; }
             else sched_yield();
         }
+        pthread_mutex_lock(&G); sleeper->host_sleep = 0; pthread_mutex_unlock(&G);
         if (g_flag.bootprof) { uint64_t d = now_ns() - t0; dm_prof_add(PROF_SLEEP, d, 0); thr_t *me = pthread_getspecific(g_keythr); if (me && me->handle == 0x1001) dm_prof_add(PROF_MAIN_WAIT, d, 0); }
         return 1;
     }
@@ -461,7 +465,8 @@ int svc_thread(int num, uint64_t *regs) {
     case 0x32: { // SetThreadActivity: native suspend/resume, used by IL2CPP GC.
         uint32_t handle=(uint32_t)regs[0], activity=(uint32_t)regs[1];
         if(activity>1) {regs[0]=0xf001;return 1;}
-        uint64_t deadline=now_ns()+100000000;
+        uint64_t deadline=now_ns()+100000000, last_pc=0;
+        int last_svc=0, last_wait=0;
         for (;;) {
             pthread_mutex_lock(&G);
             thr_t *t=h_get(handle,O_THREAD);
@@ -476,15 +481,22 @@ int svc_thread(int num, uint64_t *regs) {
                 } else if(thread_suspend(t->mport)==KERN_SUCCESS) {
                     arm_thread_state64_t st; mach_msg_type_number_t count=ARM_THREAD_STATE64_COUNT;
                     int got=thread_get_state(t->mport,ARM_THREAD_STATE64,(thread_state_t)&st,&count)==KERN_SUCCESS;
+                    last_pc=got ? __darwin_arm_thread_state64_get_pc(st) : 0;
+                    last_svc=t->last_svc;last_wait=t->wkind;
                     // Do not stop a thread holding a host allocator, file or driver lock.
-                    // A guest PC or a condition wait protected by G is a safe boundary.
-                    if(got && (t->wkind || module_of((void *)__darwin_arm_thread_state64_get_pc(st)))) t->paused=1;
+                    // Guest code, registered waits and lock-free sleeps are safe boundaries.
+                    // G prevents a waiter/sleeper from leaving while we inspect it.
+                    if(got && (t->wkind || t->host_sleep || module_of((void *)__darwin_arm_thread_state64_get_pc(st)))) t->paused=1;
                     else {thread_resume(t->mport);retry=1;}
                 } else result=R_BAD_STATE;
             }
             pthread_mutex_unlock(&G);
             if(!retry) {regs[0]=result;return 1;}
-            if(now_ns()>=deadline) {regs[0]=R_BAD_STATE;return 1;}
+            if(now_ns()>=deadline) {
+                Dl_info di={0};dladdr((void *)last_pc,&di);
+                LOG("Thread activity timed out handle=%#x activity=%u pc=%#llx symbol=%s svc=%#x wait=%d",handle,activity,last_pc,di.dli_sname?di.dli_sname:"unknown",last_svc,last_wait);
+                regs[0]=R_BAD_STATE;return 1;
+            }
             sched_yield();
         }
     }
