@@ -99,7 +99,12 @@ Native fault diagnostics include the return address and bounded frame reads from
 both host and mapped guest stacks. This keeps failures in media allocators or
 other guest subsystems distinguishable from shader conversion failures. The
 runtime selects the guest's in-process audio renderer through ABI-preserving
-guest aliases when that backend is exported. Software codec selection remains
+guest aliases when that backend is exported. Renderer completion events are
+promoted from local SDK events to SDK-owned kernel events before being shared
+with service clients. This preserves event signaling and clearing across the
+server/client boundary. Automatic renderer scheduling remains incomplete;
+event creation alone does not prove that audio processing advances.
+Software codec selection remains
 in the guest SDK. Graphics allocator registration is preserved because media
 components share that allocator; a host-only callback record is insufficient.
 
