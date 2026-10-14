@@ -22,7 +22,6 @@ export DM_SHADER_COMPILER=${DM_SHADER_COMPILER:-$ROOT/tools/compile_pending_shad
 export DM_NVN_TBDR=0
 export DM_PRESENT_LINK=${DM_PRESENT_LINK:-0}
 export DM_PRESENT_INTERVAL=${DM_PRESENT_INTERVAL:-game}
-export DM_HANDHELD=${DM_HANDHELD:-1}
 mkdir -p "$DM_SHADER_DUMP"
 DM_SHADER_CHAIN=$(python3 "$ROOT/tools/shader_chain.py" "$DM_SHADER_DUMP")
 export DM_SHADER_CHAIN

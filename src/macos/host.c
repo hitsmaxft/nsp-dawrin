@@ -1,3 +1,4 @@
+#include "settings.h"
 // Minimal native bring-up harness. Executes rewritten ARM64 on the host CPU.
 // Guest code runs directly; resources and executable caches are external.
 #include "hle.h"
@@ -126,6 +127,7 @@ static void *run(void *arg) {
     return NULL;
 }
 int main(int argc,char **argv) {
+    native_settings_init();
     if (argc<2) { fprintf(stderr,"usage: %s PATCHED_DIR [--load-only]\n",argv[0]); return 2; }
     g_flag.svc=!!getenv("DM_SVC"); g_flag.thr=!!getenv("DM_THR");g_flag.dbg=1;g_flag.bootprof=1;
     g_t0_ns=now_ns();

@@ -1,6 +1,7 @@
 #import <Cocoa/Cocoa.h>
 #import <GameController/GameController.h>
 #include "controller.h"
+#import "settings.h"
 #include <math.h>
 #include <pthread.h>
 
@@ -54,31 +55,106 @@ NativePad native_controller_read(void) {
 
 void native_controller_focus(int active) { focused = !!active; publish(); }
 
+NSString *const NativeControllersChanged = @"NativeControllersChanged";
+static NSArray<GCController *> *devices;
+static NSMapTable<GCController *, NSString *> *identifiers;
+static NSString *wanted_identifier;
+
+static NSDictionary *descriptor(GCController *controller) {
+    return @{@"vendor":controller.vendorName ?: @"Controller", @"category":controller.productCategory ?: @"Gamepad"};
+}
 static void select_controller(GCController *controller) {
-    selected.extendedGamepad.valueChangedHandler = nil;
-    selected = controller;
-    selected.handlerQueue = dispatch_get_main_queue();
-    selected.playerIndex = GCControllerPlayerIndex1;
-    selected.extendedGamepad.valueChangedHandler = ^(GCExtendedGamepad *pad, GCControllerElement *element) {
-        (void)pad; (void)element; publish();
-    };
+    if (selected != controller) {
+        selected.extendedGamepad.valueChangedHandler = nil;
+        selected.playerIndex = GCControllerPlayerIndexUnset;
+        selected = controller;
+        selected.handlerQueue = dispatch_get_main_queue();
+        selected.playerIndex = GCControllerPlayerIndex1;
+        selected.extendedGamepad.valueChangedHandler = ^(GCExtendedGamepad *pad, GCControllerElement *element) {
+            (void)pad; (void)element; publish();
+        };
+    }
     publish();
 }
-
+static void apply_selection(void) {
+    id preference=native_settings_snapshot()[@"controller"];
+    GCController *match=nil;
+    if ([preference isEqual:@"auto"]) match=[devices containsObject:selected] ? selected : devices.firstObject;
+    else if (![preference isEqual:@"none"]) {
+        for (GCController *device in devices) {
+            if (wanted_identifier && [[identifiers objectForKey:device] isEqual:wanted_identifier] && [descriptor(device) isEqual:preference]) { match=device; break; }
+            if (!wanted_identifier && !match && [descriptor(device) isEqual:preference]) match=device;
+        }
+    }
+    select_controller(match);
+    [NSNotificationCenter.defaultCenter postNotificationName:NativeControllersChanged object:nil];
+}
+// Refresh from the framework's device list; also usable with framework virtual controllers.
+void native_controller_refresh(NSArray<GCController *> *connected) {
+    if (!identifiers) identifiers=[NSMapTable weakToStrongObjectsMapTable];
+    NSMutableArray *supported=[NSMutableArray array];
+    for (GCController *controller in connected) if (controller.extendedGamepad) {
+        [supported addObject:controller];
+        if (![identifiers objectForKey:controller]) [identifiers setObject:NSUUID.UUID.UUIDString forKey:controller];
+    }
+    id preference=native_settings_snapshot()[@"controller"];
+    BOOL wantedPresent=NO;
+    for (GCController *device in supported) if ([[identifiers objectForKey:device] isEqual:wanted_identifier]) wantedPresent=YES;
+    if (!wantedPresent && [preference isKindOfClass:NSDictionary.class])
+        for (GCController *device in supported)
+            if (![devices containsObject:device] && [descriptor(device) isEqual:preference]) {
+                wanted_identifier=[identifiers objectForKey:device];break;
+            }
+    devices=[supported copy];
+    apply_selection();
+}
+NSArray<NSDictionary *> *native_controller_devices(void) {
+    NSMutableArray *result=[NSMutableArray array];
+    NSUInteger index=0;
+    for (GCController *device in devices) {
+        NSDictionary *model=descriptor(device);
+        [result addObject:@{@"id":[identifiers objectForKey:device],
+            @"name":[NSString stringWithFormat:@"%@ — %@ (%lu)",model[@"vendor"],model[@"category"],(unsigned long)++index],
+            @"selected":@(device==selected)}];
+    }
+    return result;
+}
+NSString *native_controller_selection(void) {
+    id preference=native_settings_snapshot()[@"controller"];
+    if ([preference isKindOfClass:NSString.class]) return preference;
+    return selected ? [identifiers objectForKey:selected] : @"unavailable";
+}
+BOOL native_controller_choose(NSString *identifier, NSError **error) {
+    id preference=identifier;
+    if (![@[@"auto",@"none"] containsObject:identifier]) {
+        preference=nil;
+        for (GCController *device in devices)
+            if ([[identifiers objectForKey:device] isEqual:identifier]) { preference=descriptor(device); break; }
+        if (!preference) {
+            if (error) *error=[NSError errorWithDomain:@"nsp-dawrin.controller" code:1 userInfo:@{NSLocalizedDescriptionKey:@"Controller is no longer connected"}];
+            return NO;
+        }
+    }
+    NSString *previous=wanted_identifier;
+    wanted_identifier=identifier;
+    if (!native_settings_update(@{@"controller":preference},error)) { wanted_identifier=previous; return NO; }
+    apply_selection();
+    return YES;
+}
 void native_controller_start(void) {
-    NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
+    static BOOL started=NO;
+    if (started) return;
+    started=YES;
+    NSNotificationCenter *center=NSNotificationCenter.defaultCenter;
     [center addObserverForName:GCControllerDidConnectNotification object:nil queue:NSOperationQueue.mainQueue
-                   usingBlock:^(NSNotification *note) {
-        GCController *controller = note.object;
-        if (!selected && controller.extendedGamepad) select_controller(controller);
-    }];
+        usingBlock:^(NSNotification *note) { (void)note; native_controller_refresh(GCController.controllers); }];
     [center addObserverForName:GCControllerDidDisconnectNotification object:nil queue:NSOperationQueue.mainQueue
-                   usingBlock:^(NSNotification *note) {
-        if (note.object != selected) return;
-        select_controller(nil);
-        for (GCController *controller in GCController.controllers)
-            if (controller != note.object && controller.extendedGamepad) { select_controller(controller); break; }
-    }];
-    for (GCController *controller in GCController.controllers)
-        if (controller.extendedGamepad) { select_controller(controller); break; }
+        usingBlock:^(NSNotification *note) {
+            NSMutableArray *remaining=[GCController.controllers mutableCopy];
+            [remaining removeObject:note.object];
+            native_controller_refresh(remaining);
+        }];
+    [center addObserverForName:NativeSettingsChanged object:nil queue:NSOperationQueue.mainQueue
+        usingBlock:^(NSNotification *note) { (void)note; apply_selection(); }];
+    native_controller_refresh(GCController.controllers);
 }
