@@ -17,6 +17,11 @@ def catalog(root=ROOT):
             row=dict(symbol=symbol,handler=handler,module=str(path.relative_to(root)),reason=reason)
             if symbol in bindings:conflicts.append(dict(symbol=symbol,modules=[bindings[symbol]['module'],row['module']]))
             else:bindings[symbol]=row
+        for match in re.finditer(r'HLE_GUEST_ALIAS\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*"([^"]*)"',text):
+            symbol,target,reason=match.groups()
+            row=dict(symbol=symbol,handler='guest:'+target,module=str(path.relative_to(root)),reason=reason)
+            if symbol in bindings:conflicts.append(dict(symbol=symbol,modules=[bindings[symbol]['module'],row['module']]))
+            else:bindings[symbol]=row
     return dict(bindings=list(bindings.values()),conflicts=conflicts)
 
 

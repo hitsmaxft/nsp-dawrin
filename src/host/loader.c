@@ -117,15 +117,27 @@ static uint64_t resolve_sym(module_t *m, const char *name) {
 
 // Forced take-over table (hle.h HLE_FORCE, the __DATA,swforce section): a hit overrides the definition inside the module
 static const hle_force_ent *g_force; static unsigned g_nforce; static unsigned *g_force_hits;
+static const hle_alias_ent *g_alias;static unsigned g_nalias;
 static void force_init(void) {
     unsigned long sz; g_force = (const hle_force_ent *)getsectiondata(&_mh_execute_header, "__DATA", "swforce", &sz);
     g_nforce = g_force ? (unsigned)(sz / sizeof *g_force) : 0;
     g_force_hits = calloc(g_nforce + 1, sizeof *g_force_hits);
+    g_alias=(const hle_alias_ent *)getsectiondata(&_mh_execute_header,"__DATA","swalias",&sz);
+    g_nalias=g_alias?(unsigned)(sz/sizeof *g_alias):0;
+    for(unsigned i=0;i<g_nalias;i++) {
+        for(unsigned j=0;j<g_nforce;j++)if(!strcmp(g_alias[i].name,g_force[j].name))die("Conflicting guest alias: %s",g_alias[i].name);
+        for(unsigned j=0;j<i;j++)if(!strcmp(g_alias[i].name,g_alias[j].name))die("Duplicate guest alias: %s",g_alias[i].name);
+    }
     for (unsigned i = 0; i < g_nforce; i++)
         for (unsigned j = i + 1; j < g_nforce; j++)
             if (!strcmp(g_force[i].name, g_force[j].name)) die("强制接管清单重复：%s", g_force[i].name);
 }
 static void *force_lookup(const char *name) {
+    for(unsigned i=0;i<g_nalias;i++)if(!strcmp(name,g_alias[i].name)) {
+        void *target=guest_sym(g_alias[i].target);
+        if(!target)die("Missing guest service backend: %s",g_alias[i].target);
+        return target;
+    }
     for (unsigned i = 0; i < g_nforce; i++)
         if (!strcmp(g_force[i].name, name)) {
             if (!g_force_hits[i]++ && g_flag.imports) LOG("force %s  （%s）", name, g_force[i].why);

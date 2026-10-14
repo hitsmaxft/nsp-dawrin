@@ -30,6 +30,11 @@ void guest_clock_freeze_for(int reason, int on);   // Freeze by reason (1 backgr
 // Used only for the service-layer nn:: (service clients of fs/oe/aoc/pctl...); the SDK's libc++ and nn::os internals do not go into this table.
 // Every entry must state the reason for the takeover; an entry in the table that no module references makes loading report a failure and abort (a wrong list must fail loudly).
 typedef struct { const char *name; void *fn; const char *why; } hle_force_ent;
+// Resolve directly to an ABI-compatible guest export, preserving every argument
+// register, including x8 for indirect C++ return values. No host C shim is used.
+typedef struct { const char *name, *target, *why; } hle_alias_ent;
+#define HLE_GUEST_ALIAS(mangled, target, why, id) \
+    __attribute__((used, section("__DATA,swalias"))) static const hle_alias_ent hle_alias_##id = {mangled,target,why};
 #define HLE_FORCE(mangled, why, ret, cname, ...)                                                   \
     static ret cname(__VA_ARGS__);                                                                \
     __attribute__((used, section("__DATA,swforce"))) static const hle_force_ent hle_force_##cname = {mangled, (void *)cname, why}; \

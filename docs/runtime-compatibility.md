@@ -98,4 +98,15 @@ DLC content access and save/load remain separate acceptance checks.
 Native fault diagnostics include the return address and bounded frame reads from
 both host and mapped guest stacks. This keeps failures in media allocators or
 other guest subsystems distinguishable from shader conversion failures. The
-runtime does not yet supply a general replacement for guest media services.
+runtime selects the guest's in-process audio renderer through ABI-preserving
+guest aliases when that backend is exported. Software codec selection remains
+in the guest SDK. Graphics allocator registration is preserved because media
+components share that allocator; a host-only callback record is insufficient.
+
+Transfer-memory handles track a borrowed range and reject overlap and stale
+handles. Compatible host-page offsets use coherent VM aliases. For isolated
+transfers (owner permission None), differing 4 KiB offsets on a 16 KiB host move
+contents at map/unmap ownership boundaries. The runtime does not enforce source
+subpage protection; callers must respect the exclusive-ownership contract.
+Shared transfers with incompatible page offsets are rejected. These paths use
+the application-provided SDK and codecs; no media implementation is bundled.
