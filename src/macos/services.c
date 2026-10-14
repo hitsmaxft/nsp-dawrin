@@ -20,7 +20,3 @@ HLE_FORCE("_ZN2nn2oe27SetPerformanceConfigurationEi", "macOS manages CPU and GPU
 HLE_FORCE("_ZN2nn2oe18GetDesiredLanguageEv", "Chinese language code", uint64_t, oe_lang, void) { uint64_t lang=0;memcpy(&lang,"zh-Hans",7);return lang; }
 HLE_FORCE("_ZN2nn2oe31EnterExitRequestHandlingSectionEv", "Probe lifetime controlled by host", void, oe_enter_exit, void) {}
 HLE_FORCE("_ZN2nn2oe31LeaveExitRequestHandlingSectionEv", "Probe lifetime controlled by host", void, oe_leave_exit, void) {}
-
-// Base-package mode exposes no installed add-on content.
-HLE_FORCE("_ZN2nn3aoc16CountAddOnContentEv", "No installed add-on content", int, aoc_count, void) {return 0;}
-HLE_FORCE("_ZN2nn3aoc16ListAddOnContentEPiii", "Empty installed add-on content list", int, aoc_list, int *indices,int offset,int count) {(void)indices;(void)offset;(void)count;return 0;}

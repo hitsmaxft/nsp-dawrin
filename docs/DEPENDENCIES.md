@@ -100,3 +100,7 @@ at `1d64a83450e025622f3468c28fc4164dad2c5ef6` (`nca.c`, `nca.h`, `bktr.h`,
 `xci.h`, `hfs0.h`). The Python implementation uses its own bounded reader and
 flattened range representation. The original ISC notice is retained in
 [LICENSES/hactool-ISC.txt](../LICENSES/hactool-ISC.txt).
+
+Application control property field names and save allocation offsets were checked
+against the libnx authors' [nacp.h](https://github.com/switchbrew/libnx/blob/master/nx/include/switch/nacp.h).
+This is a format reference; libnx source is not bundled or linked.

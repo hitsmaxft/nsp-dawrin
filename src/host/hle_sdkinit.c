@@ -8,7 +8,6 @@ static void once(const char *what) { LOG("Host service initialization: %s (no IP
 
 HLE_FORCE("nndiagStartup", "Host diagnostics replace the logging service", void, h_nndiagStartup, void) { once("nndiagStartup"); }
 HLE_FORCE("_ZN2nn2oe10InitializeEv", "Host execution environment", void, h_oe_Initialize, void) { once("oe::Initialize"); }
-HLE_FORCE("_ZN2nn3aoc10InitializeEv", "No service session; base-package mode exposes an empty add-on list", void, h_aoc_Initialize, void) { once("aoc::Initialize"); }
 HLE_FORCE("_ZN2nn3err26InitializeContextWriterApiEv", "No remote error reporting", void, h_err_InitCtx, void) { once("err::InitializeContextWriterApi"); }
 HLE_FORCE("_ZN2nn2fs24InitializeForApplicationEv", "Host filesystem and indexed package resources", void, h_fs_InitApp, void) { once("fs::InitializeForApplication"); }
 HLE_FORCE("_ZN2nn4pctl10InitializeEv", "No parental control service", void, h_pctl_Initialize, void) { once("pctl::Initialize"); }

@@ -7,6 +7,8 @@
 #include "hle.h"
 #include "front.h"
 #include "dir_count.h"
+#include "../macos/content.h"
+#include "../macos/storage.h"
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -26,7 +28,7 @@ enum { DIRMODE_DIR = 1, DIRMODE_FILE = 2 };
 typedef struct { char name[0x301]; uint8_t pad0[3]; int8_t type; uint8_t pad1[3]; int64_t size; } DirectoryEntry;
 _Static_assert(sizeof(DirectoryEntry) == 0x310, "DirectoryEntry 布局");
 
-#define MAX_MOUNT 16
+#define MAX_MOUNT 256
 // Save transactions (HLE audit items 1–3): on the real device a save can be rolled back as a whole before commit, and after a crash / kill a remount sees only the version from the last Commit.
 // Host: at mount, the committed directory commit (= $DM_SAVE) is clonefile'd as a whole tree into the working directory <commit>.work (APFS copy-on-write, nearly zero cost), and the mount points at the working directory,
 // all game reads and writes happen in the working directory; Commit = clonefile(work → <commit>.new), then renamex_np(RENAME_SWAP) swaps it atomically with commit, then the swapped-out old version is deleted.
@@ -234,11 +236,39 @@ HLE_FORCE("_ZN2nn2fs8MountRomEPKcPvm", "fsp-srv；rom → 宿主 RomFS 目录", 
 HLE_FORCE("_ZN2nn2fs21MountTemporaryStorageEPKc", "fsp-srv；临时区 → 宿主目录", Result, h_fs_MountTemp, const char *name) {
     char b[1024]; return mount(name, envdir("DM_TEMP", "run/platform/temp", b, sizeof b), 0);
 }
-HLE_FORCE("_ZN2nn2fs14EnsureSaveDataERKNS_7account3UidE", "fsp-srv；存档目录在挂载时建", Result, h_fs_EnsureSave, const void *uid) { (void)uid; return RES_OK; }
+HLE_FORCE("_ZN2nn2fs14EnsureSaveDataERKNS_7account3UidE", "Ensure the application save namespace and allocation", Result, h_fs_EnsureSave, const void *uid) { (void)uid; return native_save_ensure() ? RES_FAIL : RES_OK; }
 HLE_FORCE("_ZN2nn2fs18IsSaveDataExistingERKNS_7account3UidE", "Local save namespace exists", int, h_fs_SaveExists, const void *uid) {
     (void)uid;const char *p=getenv("DM_SAVE");struct stat st;
     return p && !stat(p,&st) && S_ISDIR(st.st_mode);
 }
+// Shared storage operations, independent of SDK symbol spelling.
+HLE_FORCE("_ZN2nn2fs15GetSaveDataSizeEPlS1_RKNS_7account3UidE", "Read application save allocation", Result,
+    h_fs_SaveSize, int64_t *data, int64_t *journal, const void *uid) {
+    (void)uid;return native_save_sizes(data,journal)?RES_FAIL:RES_OK;
+}
+HLE_FORCE("_ZN2nn2fs14ExtendSaveDataERKNS_7account3UidEll", "Persist expanded save allocation", Result,
+    h_fs_ExtendSave, const void *uid, int64_t data, int64_t journal) {
+    (void)uid;return native_save_extend(data,journal)?RES_FAIL:RES_OK;
+}
+static Result storage_space(int64_t *out,const char *path,int total) {
+    if(!out || !path)return RES_FAIL;
+    PATH_LOCK();const char *colon=strchr(path,':');if(!colon)return RES_PATH_NOT_FOUND;
+    for(int i=0;i<g_nmnt;i++)if(strlen(g_mnt[i].name)==(size_t)(colon-path) && !strncmp(g_mnt[i].name,path,colon-path)) {
+        int64_t available,capacity;if(native_storage_space(g_mnt[i].dir,&available,&capacity))return RES_FAIL;
+        *out=total?capacity:g_mnt[i].ro?0:available;return RES_OK;
+    }
+    return RES_PATH_NOT_FOUND;
+}
+HLE_FORCE("_ZN2nn2fs16GetFreeSpaceSizeEPlPKc", "Query mounted host storage", Result,
+    h_fs_FreeSpace, int64_t *out, const char *path) {return storage_space(out,path,0);}
+HLE_FORCE("_ZN2nn2fs17GetTotalSpaceSizeEPlPKc", "Query mounted host storage", Result,
+    h_fs_TotalSpace, int64_t *out, const char *path) {return storage_space(out,path,1);}
+HLE_FORCE("_ZN2nn2fs17MountAddOnContentEPKci", "Mount indexed add-on resources read-only", Result,
+    h_fs_MountAddon, const char *name, int index) {
+    char root[1024];if(!native_content_root(index,root,sizeof root))return RES_PATH_NOT_FOUND;
+    return mount(name,root,1);
+}
+
 // The current working directory of the transactional save (the copy the game reads and writes; the host's own side files must be written here to enter the committed version with Commit). Returns NULL when no save is mounted
 const char *dm_save_workdir(void) { for (int i = 0; i < g_nmnt; i++) if (g_mnt[i].commit[0]) return g_mnt[i].dir; return NULL; }
 // The committed directory of the transactional save (the copy on disk, the version from the last Commit). Returns NULL when no save is mounted
