@@ -2,7 +2,7 @@
 
 A native launcher and ARM64 compatibility runtime for macOS. Guest CPU instructions execute directly after rewriting, with local host services and an NVN-to-Metal graphics backend.
 
-- Launch NSP packages with resources read directly from the package.
+- Launch NSP/XCI content with resources read directly from the package.
 - Prepare shaders through a modular Maxwell → SPIR-V → MSL pipeline.
 - Use mouse touch, keyboard, and system-supported game controllers.
 - Inspect runtime state and interact through a local CLI with OCR.
@@ -40,11 +40,18 @@ GAME_DIR=/path/cache DM_WINDOW=1 DM_TIMEOUT=0 ./run.sh
 
 The app bundle uses the same `GAME_DIR` and local checkout. `DOTNET` can select an SDK executable outside PATH.
 
-Package preparation currently supports base NSP packages. XCI, update merging,
-and DLC loading are not implemented yet. The app bundle is a launcher for the
-local development environment, not a standalone converted application.
-The current development focus is launching application packages and their DLC;
-standalone application export and installers are deferred.
+The launcher reads NSP and XCI secure partitions and accepts associated updates
+and DLC selected through content metadata:
+
+```sh
+python tools/launch.py /path/base.nsp --keys /path/local.keys \
+  --update /path/update.nsp --dlc /path/addon.nsp --inspect
+```
+
+Remove `--inspect` to prepare and launch. Repeat `--dlc` for additional content.
+See [Content loading](docs/content-loading.md) for supported storage formats.
+The development focus is the native launcher; standalone application export and
+installers are deferred. The current app bundle uses the local development environment.
 
 ## Startup check
 
@@ -140,6 +147,7 @@ This project builds on the work of many authors and maintainers. In particular, 
 - **fincs and devkitPro** for [deko3d](https://github.com/devkitPro/deko3d), whose zlib-licensed texture layout algorithm is adapted in `nvn_tex.c`.
 - **h1k421** for the MIT-licensed `nvn.h` graphics interface declarations.
 - **Sergii Kudlai (iOrange)** for [bcdec](https://github.com/iOrange/bcdec), used for BC texture decoding under its MIT license option.
+- **SciresM** for [hactool](https://github.com/SciresM/hactool), used as a reference for content container and patch-storage layouts.
 - **Khronos Group and SPIRV-Cross contributors** for the SPIR-V definitions and [SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross) translation to Metal Shading Language.
 - **UnityPy, cryptography, python-lz4, Capstone, Unicorn, Tesseract, Python, .NET, and LLVM contributors**, and the maintainers of their dependencies, for asset inspection, package reading, instruction verification, OCR, and the build tools.
 

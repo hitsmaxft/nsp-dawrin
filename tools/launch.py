@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
-from package import Package
+from content import ContentSet
 
 
 def main():
@@ -16,12 +16,20 @@ def main():
     parser.add_argument('--cache-root', type=Path, default=Path.home()/'Library/Caches/nsp-dawrin')
     parser.add_argument('--prepare-only', action='store_true')
     parser.add_argument('--engine', default='auto')
+    parser.add_argument('--update', type=Path, action='append', default=[])
+    parser.add_argument('--dlc', type=Path, action='append', default=[])
+    parser.add_argument('--application-id', type=lambda value:int(value,16))
+    parser.add_argument('--inspect', action='store_true', help='Show selected content without preparing or launching')
     args = parser.parse_args()
     tools = Path(__file__).resolve().parent
-    package = Package(args.package, args.keys)
+    package = ContentSet([args.package,*args.update,*args.dlc],args.keys,args.application_id)
+    if args.inspect:
+        try: print(json.dumps(package.describe(),indent=2))
+        finally: package.close()
+        return
     cache = args.cache_root.resolve()/package.title_id
-    stamp = dict(package=str(package.path), size=package.path.stat().st_size,
-                 modified_ns=package.path.stat().st_mtime_ns,
+    stamp = dict(content=[dict(path=str(c.path),size=c.size,modified_ns=c.path.stat().st_mtime_ns) for c in package.containers],
+                 selection=package.describe(),
                  engine=args.engine, rewriter=hashlib.sha256((tools/'patch_nso.py').read_bytes()).hexdigest())
     receipt = cache/'prepared.json'
     fresh = not receipt.exists() or json.loads(receipt.read_text()) != stamp

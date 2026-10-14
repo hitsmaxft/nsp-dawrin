@@ -91,3 +91,12 @@ not claimed as direct contributions or validation of this project.
 For a binary distribution, collect complete notices from the exact bundled
 artifacts as well as the vendored source. This inventory is a source map and
 acknowledgment record; the original license texts remain authoritative.
+
+## Content format references
+
+The package reader's PFS0/HFS0, XCI, NCA and BKTR storage layouts and counter
+handling were checked against [SciresM/hactool](https://github.com/SciresM/hactool)
+at `1d64a83450e025622f3468c28fc4164dad2c5ef6` (`nca.c`, `nca.h`, `bktr.h`,
+`xci.h`, `hfs0.h`). The Python implementation uses its own bounded reader and
+flattened range representation. The original ISC notice is retained in
+[LICENSES/hactool-ISC.txt](../LICENSES/hactool-ISC.txt).

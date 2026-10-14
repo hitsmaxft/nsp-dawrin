@@ -120,8 +120,8 @@ class PipelineTests(unittest.TestCase):
     def test_resource_reader_clamps_ranges(self):
         package = Package.__new__(Package)
         package.files = {'sample': (100, 6)}
-        package.rom_section = None
-        package.read = lambda section, start, length: b'sample'[start-100:start-100+length]
+        from types import SimpleNamespace
+        package.rom_section = SimpleNamespace(read=lambda start, length: b'sample'[start-100:start-100+length])
         self.assertEqual(package.read_resource('sample', 4, 30), b'le')
         self.assertEqual(package.read_resource('sample', 6, 30), b'')
         self.assertEqual(package.resource('sample'), b'sample')
