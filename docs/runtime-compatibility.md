@@ -126,3 +126,7 @@ Vision OCR recognizes Simplified Chinese and English locally by default. Set
 `NSP_OCR_LANGUAGES=en-US` for fast English-only recognition, or provide a comma-
 separated list of supported Vision language tags. Revision 2 avoids the newer
 model initialization stall observed on the validation host.
+
+Controller-support requests select the existing combined keyboard/controller
+at player index zero. Requests requiring multiple players or an unsupported
+controller style return failure; no additional players are fabricated.

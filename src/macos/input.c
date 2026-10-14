@@ -8,6 +8,7 @@ _Atomic uint64_t native_touch_samples;
 _Atomic uint64_t native_touch_contacts;
 static _Atomic uint64_t sampling;
 static uint32_t supported=1;
+static _Atomic int joy_hold;
 static pthread_mutex_t touch_lock=PTHREAD_MUTEX_INITIALIZER;
 static uint32_t touch_x,touch_y;static int touch_down,touch_previous;
 void native_touch(int down,int x,int y) {
@@ -67,6 +68,20 @@ HLE_FORCE("_ZN2nn3hid22SetSupportedNpadIdTypeEPKjm","One host controller at inde
 HLE_FORCE("_ZN2nn3hid24SetSupportedNpadStyleSetENS_4util10BitFlagSetILi32ENS0_12NpadStyleTagEEE","Store supported styles",void,hid_styles,uint32_t styles) {supported=styles;}
 HLE_FORCE("_ZN2nn3hid24GetSupportedNpadStyleSetEv","Supported styles",uint32_t,hid_get_styles,void) {return supported;}
 HLE_FORCE("_ZN2nn3hid15GetNpadStyleSetERKj","Host full controller",uint32_t,hid_style,const uint32_t *id) {return *id==0?(supported&1):0;}
+// The host exposes one combined keyboard/controller at player index zero.
+// The applet result reports that existing device; it never invents extra players.
+typedef struct {int8_t count;uint8_t reserved[3];uint32_t selected;} SupportResult;
+_Static_assert(sizeof(SupportResult)==8,"Controller support result ABI");
+HLE_FORCE("_ZN2nn3hid18GetNpadJoyHoldTypeEv","Host controller orientation",int,hid_hold_get,void) {return atomic_load(&joy_hold);}
+HLE_FORCE("_ZN2nn3hid18SetNpadJoyHoldTypeENS0_15NpadJoyHoldTypeE","Host controller orientation",void,hid_hold_set,int value) {if(value==0 || value==1)atomic_store(&joy_hold,value);}
+HLE_FORCE("_ZN2nn3hid21ShowControllerSupportEPNS0_27ControllerSupportResultInfoERKNS0_20ControllerSupportArgE","Select the configured local input device",Result,hid_support,SupportResult *out,const uint8_t *args) {
+    if(out)memset(out,0,sizeof *out);
+    if(!args || !(supported&1) || (!args[5] && ((int8_t)args[0]>1 || (int8_t)args[0]<0 || (int8_t)args[1]<1)))return RES_FAIL;
+    if(out)out->count=1;
+    LOG("Controller support selected local player 0");
+    return RES_OK;
+}
+HLE_FORCE("_ZN2nn3hid21ShowControllerSupportERKNS0_20ControllerSupportArgE","Select the configured local input device",Result,hid_support_noresult,const uint8_t *args) {return hid_support(NULL,args);}
 #define STATE(kind,code,style) \
 HLE_FORCE("_ZN2nn3hid12GetNpadStateEPNS0_" kind "ERKj","Host controller sample",void,hid_state_##code,State *s,const uint32_t *id) {fill(s,id,style);} \
 HLE_FORCE("_ZN2nn3hid13GetNpadStatesEPNS0_" kind "EiRKj","Latest host controller sample",int,hid_states_##code,State *s,int n,const uint32_t *id) {if(n<1)return 0;fill(s,id,style);return 1;}
@@ -76,7 +91,6 @@ STATE("16NpadJoyDualState",dual,4)
 STATE("16NpadJoyLeftState",left,8)
 STATE("17NpadJoyRightState",right,16)
 HLE_FORCE("_ZN2nn3hid29SetNpadHandheldActivationModeENS0_26NpadHandheldActivationModeE","Docked mode",void,hid_handheld,int mode) {(void)mode;}
-HLE_FORCE("_ZN2nn3hid18SetNpadJoyHoldTypeENS0_15NpadJoyHoldTypeE","No detachable JoyCons",void,hid_hold,int mode) {(void)mode;}
 HLE_FORCE("_ZN2nn3hid20IsVibrationPermittedEv","No vibration device",int,hid_vibration,void) {return 0;}
 HLE_FORCE("_ZN2nn3hid25GetVibrationDeviceHandlesEPNS0_21VibrationDeviceHandleEiRKjNS_4util10BitFlagSetILi32ENS0_12NpadStyleTagEEE","No vibration device",int,hid_vib_handles,void *out,int n,const uint32_t *id,uint32_t style) {(void)out;(void)n;(void)id;(void)style;return 0;}
 HLE_FORCE("_ZN2nn3hid19GetTouchScreenStateILm16EEEvPNS0_16TouchScreenStateIXT_EEE","Host pointer contacts",void,hid_touch,void *out) {fill_touch(out,0x290);}

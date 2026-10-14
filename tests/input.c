@@ -11,5 +11,11 @@ int main(void) {
     atomic_store(&native_buttons,0);fill(&state,&id,1);assert(state.lx==-32767);
     pad.lx=1234;fill(&state,&id,1);assert(state.lx==1234);
     id=1;fill(&state,&id,1);assert(!state.buttons && !state.attributes && !state.lx);
+    uint8_t args[7]={0,4,1,1,1,0,0};SupportResult result;
+    assert(!hid_support(&result,args) && result.count==1 && result.selected==0);
+    args[0]=2;assert(hid_support(&result,args) && !result.count);
+    args[5]=1;assert(!hid_support(&result,args) && result.count==1);
+    supported=2;assert(hid_support(&result,args));supported=1;
+    hid_hold_set(1);assert(hid_hold_get()==1);hid_hold_set(99);assert(hid_hold_get()==1);
     puts("PASS: CLI stick directions, opposite inputs and controller axis precedence");
 }
