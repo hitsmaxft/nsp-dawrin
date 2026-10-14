@@ -1,0 +1,39 @@
+// Metal execution layer of the NVN null device (C interface): memory pool = zero-copy MTLBuffer, submit = MTLCommandBuffer, sync = MTLSharedEvent.
+// Ordering convention (to avoid repeating the GO_MAP_SHARE corrupted-picture mistake of the x86 route): every visible effect of "GPU completion" (sync object ready, event values, counters)
+// happens only after the Metal command buffer has actually completed; CPU-side waits look only at the completed value of the MTLSharedEvent.
+#pragma once
+#include <stdint.h>
+#include <stddef.h>
+
+void mtl_init(void);
+void bf_want_note(const char *key);
+
+// Memory pool: [mem, mem+size) is expanded outward to page boundaries to build a zero-copy buffer; look up the buffer and offset by GPU address (= CPU address)
+void mtl_pool_add(const void *mem, uint64_t size);
+void mtl_pool_del(const void *mem);
+int mtl_addr(uint64_t addr, uint64_t len, void **buf, uint64_t *off);   // 1 on success; buf is a (__bridge) id<MTLBuffer>
+
+typedef struct {
+    uint32_t pso, cps, shaders, dss;
+    uint32_t view_nonnull, view_slots, live_tex, sview_nonnull;
+    uint32_t pools;
+    uint64_t pool_adds;
+    uint32_t c1_bufs; uint64_t c1_alloc, c1_data;   // Shader c1 constant segment: buffer count (4 MiB blocks + dedicated 64 KiB), allocated bytes, actual bytes
+} mtl_res_count;
+void mtl_res_counts(uint32_t tick, const char *why);   // Print one line of resource counts (the host calls it per tick / event, see dm_res_report_register in dm.h)
+void mtl_res_snapshot(mtl_res_count *out);
+
+// One submit: begin -> several operations -> commit (returns the fence value at which this submit completes)
+void mtl_sub_begin(void);
+void mtl_sub_copy(uint64_t src, uint64_t dst, uint64_t n);               // Buffer copy in GPU ordering
+void mtl_sub_event(volatile uint32_t *val, uint32_t mode, uint32_t v);   // Write the event value after completion (0 write / 1 add)
+void mtl_sub_counter(uint64_t addr, uint32_t type);                       // Write the counter record after completion
+uint64_t mtl_sub_commit(void);
+
+uint64_t mtl_last_fence(void);                       // Fence value of the most recent submit (0 = never submitted)
+int mtl_wait(uint64_t fence, uint64_t timeout_ns);   // Returns 1 when the GPU has completed up to fence, 0 on timeout
+void mtl_finish(void);                               // Wait for all submitted commands to complete
+void mtl_drain(void);                                // Wait for all commands on the queue (including presents) to complete: submit an empty command buffer and wait for it
+void mtl_xv_window_tex(uint64_t serial);   // Register a window (swapchain) texture: the cross-submit validity ledger never collects it
+void mtl_ui_ghost(int on, float px, float py, const float grid[4], float cx, float cy);   // Drag-follow image for shop items: when on=1, the icon of the item that covers screen point (px,py) and sits on the shop shelf grid `grid` (top-left x,y, width and height of one cell) is translated to center (cx,cy) and drawn once more at the end of the UI pass (normalized, top-left origin); callable from any thread
+int mtl_ui_ghost_rect(float r[4]);   // Screen rectangle (normalized) of the item recognized above; returns 0 if not recognized yet
