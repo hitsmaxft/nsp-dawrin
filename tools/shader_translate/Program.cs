@@ -43,7 +43,8 @@ static class SwshXlate
         {
             (int off0, _, _) = TextureHandle.UnpackOffsets(handle);
             int bytes = off0 * 4;
-            return (cbufSlot < 0 || (cbufSlot & 0xffff) == 2) && bytes >= TexBase && bytes < SampBase && (bytes - TexBase) % 8 == 0 ? (bytes - TexBase) / 8 : -1;
+            int start = ((uint)handle >> 28) != 0 ? TexBase : 0x20;
+            return (cbufSlot < 0 || (cbufSlot & 0xffff) == 2) && bytes >= start && bytes < start + 128 * 8 && (bytes - start) % 8 == 0 ? (bytes - start) / 8 : -1;
         }
         public SamplerType QuerySamplerType(int handle, int cbufSlot = -1)
         {
@@ -64,7 +65,7 @@ static class SwshXlate
             int slot = TexSlot(handle, cbufSlot);
             string f = _job["img"] is JsonObject t && slot >= 0 && t[slot.ToString()] is JsonObject o ? (string)o["fmt"] : null;
             if (f == null) { Notes.Add($"Missing image format: handle={handle:X}, slot={slot}; assuming R8G8B8A8Unorm"); return TextureFormat.R8G8B8A8Unorm; }
-            return Enum.TryParse(f, true, out TextureFormat tf) ? tf : TextureFormat.R8G8B8A8Unorm;
+            return Enum.TryParse(f, true, out TextureFormat tf) ? tf : throw new ArgumentException("Unsupported image format metadata");
         }
         int Local(int i) => _job["local"] is JsonArray a && a.Count > i ? (int)a[i] : 1;
         public int QueryComputeLocalSizeX() => Local(0);

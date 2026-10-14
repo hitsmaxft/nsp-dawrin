@@ -40,14 +40,14 @@ def chain_version(directory, cross=None):
     compiler = TOOLS/'shader_translate/bin/Release/net10.0'
     files = {str(path.relative_to(TOOLS)): path for path in (TOOLS/'nsp_runtime').rglob('*.py')}
     for name in ('prepare_shaders.py', 'build_metal.py', 'compile_pending_shaders.py',
-                 'shader_translate/Program.cs', 'shader_translate/dmsh_xlate.csproj'):
+                 'shader_jobs.py', 'shader_translate/Program.cs', 'shader_translate/dmsh_xlate.csproj'):
         files[name] = TOOLS/name
     for path in compiler.glob('*.dll'):
         files['compiler/'+path.name] = path
     if not (compiler/'dmsh_xlate.dll').is_file():
         raise RuntimeError('Build the offline translator before preparing or launching shaders')
     files['spirv-cross'] = Path(cross)
-    for name in ('nvn_refl.h', 'nvn_refl.m', 'nvn_mtl.m'):
+    for name in ('nvn_refl.h', 'nvn_refl.m', 'nvn_mtl.m', 'nvn_runtime_facts.inc', 'hle_nvn.c'):
         files['binding/'+name] = TOOLS.parent/'src/gfx/nvn'/name
     facts = Path(directory)/'shader-facts.json'
     if facts.exists():

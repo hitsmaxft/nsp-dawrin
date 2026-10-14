@@ -16,6 +16,7 @@ def main():
     parser.add_argument('--cache-root', type=Path, default=Path.home()/'Library/Caches/nsp-dawrin')
     parser.add_argument('--prepare-only', action='store_true')
     parser.add_argument('--engine', default='auto')
+    parser.add_argument('--shaders',choices=('runtime','prewarm'),default='runtime')
     parser.add_argument('--update', type=Path, action='append', default=[])
     parser.add_argument('--dlc', type=Path, action='append', default=[])
     parser.add_argument('--application-id', type=lambda value:int(value,16))
@@ -30,7 +31,7 @@ def main():
     cache = args.cache_root.resolve()/package.title_id
     stamp = dict(content=[dict(path=str(c.path),size=c.size,modified_ns=c.path.stat().st_mtime_ns) for c in package.containers],
                  selection=package.describe(),
-                 engine=args.engine, rewriter=hashlib.sha256((tools/'patch_nso.py').read_bytes()).hexdigest())
+                 engine=args.engine, shaders=args.shaders, rewriter=hashlib.sha256((tools/'patch_nso.py').read_bytes()).hexdigest())
     receipt = cache/'prepared.json'
     fresh = not receipt.exists() or json.loads(receipt.read_text()) != stamp
     try:
@@ -42,12 +43,14 @@ def main():
                 source = cache/'ExeFS'/name
                 if source.exists():
                     subprocess.run([sys.executable, str(tools/'patch_nso.py'), str(source), str(cache/'patched'), name], check=True)
-            from scan_shaders import scan
-            report = scan(package, cache/'shaders', args.engine)
-            if not report['complete']:
-                raise RuntimeError('Engine scan is incomplete; see scan-report.json')
+            (cache/'shaders').mkdir(exist_ok=True)
+            if args.shaders=='prewarm':
+                from scan_shaders import scan
+                report=scan(package,cache/'shaders',args.engine)
+                if not report['complete']:raise RuntimeError('Engine prewarm scan is incomplete; see scan-report.json')
             receipt.write_text(json.dumps(stamp, indent=2))
-        subprocess.run([sys.executable, str(tools/'compile_pending_shaders.py'), str(cache/'shaders')], check=True)
+        if args.shaders=='prewarm':
+            subprocess.run([sys.executable,str(tools/'compile_pending_shaders.py'),str(cache/'shaders')],check=True)
     finally:
         package.close()
     if args.prepare_only:

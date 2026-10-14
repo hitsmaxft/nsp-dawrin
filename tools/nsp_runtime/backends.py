@@ -61,9 +61,9 @@ class MetalSourceBackend:
     def __init__(self, chain, cross):
         self.chain, self.cross = chain, cross
 
-    def build(self, directory):
+    def build(self, directory, key=None):
         subprocess.run([sys.executable, str(TOOLS/'build_metal.py'), str(directory),
-                        '--chain', self.chain, '--spirv-cross', self.cross], check=True, timeout=900)
+                        '--chain', self.chain, '--spirv-cross', self.cross]+(['--key',key] if key else []), check=True, timeout=900)
         failures = json.loads((directory/'binding-failures.json').read_text())
         completed = [line.split('\t')[1] for line in (directory/'shader_map.tsv').read_text().splitlines()
                      if line and not line.startswith('#')]

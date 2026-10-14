@@ -43,7 +43,6 @@
 #include "../tex/nvn_deswizzle.h"
 #include "../tex/nvn_deswizzle_gpu.h"
 #include "../tex/nvn_bcdec.h"
-#include "nvn_builtin.h"
 #include "nvn_dirty.h"
 #include "nvn_refl.h"
 #include "nvn_cover.h"
@@ -1894,7 +1893,7 @@ static void shmap_load(void) {
     const char *m = getenv("DM_MSL_DIR");
     // The launcher fingerprints the actual translation tools and sources. Only matching reflection is loaded.
     g_msl_dir = [NSString stringWithFormat:@"%@/b-%s", m ? @(m) : [NSString stringWithFormat:@"%s%s/build/cache/metal_shader_cache", getenv("DM_ROOT") ?: getenv("HOME"), getenv("DM_ROOT") ? "" : "/dm-work"], shader_chain()];
-    if (![NSFileManager.defaultManager fileExistsAtPath:g_msl_dir]) MLOG("【红】着色器库目录 %s 不存在：本源码树的翻译链版本 %s 还没出包（dm/gfx/tools/dmsh_build.py）", g_msl_dir.UTF8String, shader_chain());
+    if (![NSFileManager.defaultManager fileExistsAtPath:g_msl_dir]) MLOG("Shader cache is empty; programs will compile on first use");
     NSString *cp = [[path stringByDeletingLastPathComponent] stringByAppendingPathComponent:@"c1_full.tsv"];   // Same directory as the mapping table (Mac: dm/gfx/nvn; iOS: dm/ inside the App, copied along by run.sh)
     NSString *ct = cp ? [NSString stringWithContentsOfFile:cp encoding:NSUTF8StringEncoding error:nil] : nil;
     NSString *head = ct ? [[ct componentsSeparatedByString:@"\n"] firstObject] : nil;
@@ -1909,7 +1908,7 @@ static void shmap_load(void) {
     warm_start();
 }
 
-@interface NvShader : NSObject { @public id<MTLFunction> fn; nvn_refl rf; id<MTLArgumentEncoder> ae; NSUInteger arg_len; int stage, range_ro; const char *builtin; uint64_t logged; char key[24]; id<MTLBuffer> c1buf; uint64_t c1_gpu; size_t c1off;
+@interface NvShader : NSObject { @public id<MTLFunction> fn; nvn_refl rf; id<MTLArgumentEncoder> ae; NSUInteger arg_len; int stage, range_ro; uint64_t logged; char key[24]; id<MTLBuffer> c1buf; uint64_t c1_gpu; size_t c1off;
     // The argument buffer encoded last time
     id<MTLBuffer> ab_buf; uint64_t ab_gpu; size_t ab_off; uint64_t ab_pass;   // ab_pass: serial of the render pass that encoded this argument block - reused only within the same pass (the arena holding a block from another pass / another submission may already have been reclaimed and rewritten)
     id<MTLLibrary> bflib; int bflib_tried; NSMutableDictionary<NSString *, id<MTLFunction>> *bffn; } @end   // bflib: readable-tile version <key>_bf (merge B step 2)
@@ -2107,68 +2106,55 @@ static NvShader *shader_get(NSString *pc, int stage) {
     g_bp_lib_n++; g_bp_lib_ns += bp_now() - bt;
     return o;
 }
-static id<MTLLibrary> g_builtin_lib;
-static NSMutableDictionary<NSString *, NvShader *> *g_builtin;
-static NvShader *builtin_get(const char *ctl) {
-    for (unsigned i = 0; i < sizeof k_nvn_builtin_map / sizeof *k_nvn_builtin_map; i++) {
-        if (strcmp(ctl, k_nvn_builtin_map[i].ctl)) continue;
-        if (!g_builtin) g_builtin = [NSMutableDictionary dictionary];
-        NvShader *o = g_builtin[@(ctl)];
-        if (o) return o;
-        if (!g_builtin_lib) {
-            NSError *e = nil; g_builtin_lib = [g_dev newLibraryWithSource:@(k_nvn_builtin_msl) options:nil error:&e];
-            if (!g_builtin_lib) MDIE("内嵌计算核 MSL 编译失败：%s", e.localizedDescription.UTF8String);
-        }
-        o = [NvShader new]; o->fn = [g_builtin_lib newFunctionWithName:@(k_nvn_builtin_map[i].fn)]; o->stage = 5; o->builtin = k_nvn_builtin_map[i].fn;
-        g_builtin[@(ctl)] = o;
-        return o;
-    }
-    return nil;
+static NSDictionary *runtime_shader_facts(const NVNshaderData *shader);
+static NSString *short_hash(NSData *data) {
+    uint8_t md[32];CC_SHA256(data.bytes,(CC_LONG)data.length,md);
+    return [NSString stringWithFormat:@"%02x%02x%02x%02x%02x%02x%02x%02x",md[0],md[1],md[2],md[3],md[4],md[5],md[6],md[7]];
 }
-static __unsafe_unretained NvProg *prog_get(const prog_t *cp) {   // Called only on the submit thread
-    prog_t *p = (prog_t *)cp;
-    static const prog_t *lp; static uint64_t lser, lgen; static NvProg *lpr;   // Last result: same object, same serial and unchanged serial table means it is used directly
-    uint64_t gen = g_ser_gen;
-    if (p == lp && p->serial == lser && gen == lgen && lpr) return lpr;
-    __unsafe_unretained NvProg *have = p->serial ? serial_get(p->serial) : nil;
-    if (have) { lp = p; lser = p->serial; lgen = gen; lpr = have; return have; }
+static __unsafe_unretained NvProg *prog_get(const prog_t *p) {
+    static NSMutableDictionary *programs;
+    if(!programs)programs=[NSMutableDictionary new];
     shmap_load();
-    NvProg *o = [NvProg new];
-    for (unsigned i = 0; i < p->nstage; i++) {
-        uint8_t md[32]; CC_SHA256(p->sd[i].control, 0x880, md);
-        NSString *k = [NSString stringWithFormat:@"%02x%02x%02x%02x%02x%02x%02x%02x", md[0], md[1], md[2], md[3], md[4], md[5], md[6], md[7]];
-        NSString *zh = g_shmap[k];
-        if (!zh) {   // Not in the package: look up the compute kernels embedded in the main body (nvn_builtin.h)
-            NvShader *b = builtin_get(k.UTF8String);
-            if (b) { o->sh[5] = b; continue; }
-            const char *compiler=getenv("DM_SHADER_COMPILER"), *dump=getenv("DM_SHADER_DUMP");
-            if (compiler && dump) {
-                MLOG("First-use shader %s: compiling captured shaders",k.UTF8String);
-                NSTask *task=[NSTask new];task.executableURL=[NSURL fileURLWithPath:@"/usr/bin/python3"];
-                task.arguments=@[@(compiler),@(dump),@"--key",k];
-                NSError *error=nil;
-                if (![task launchAndReturnError:&error]) MDIE("shader compiler launch: %s",error.description.UTF8String);
-                [task waitUntilExit];
-                if (task.terminationStatus) MDIE("shader compiler failed (%d)",task.terminationStatus);
-                NSString *fresh=[NSString stringWithContentsOfFile:g_shmap_path encoding:NSUTF8StringEncoding error:nil];
-                for (NSString *line in [fresh componentsSeparatedByString:@"\n"]) {
-                    if (!line.length || [line hasPrefix:@"#"]) continue;
-                    NSArray *columns=[line componentsSeparatedByString:@"\t"];
-                    if (columns.count>3) {
-                        g_shmap[columns[3]]=columns[2];
-                        [g_c1_full addObject:[columns[3] stringByAppendingString:@"_b"]];
-                    }
-                }
-                zh=g_shmap[k];
-            }
-            if (!zh) MDIE("shader %s missing from this title's map",k.UTF8String);
-        }
-        int st = stage_of(zh);
-        NvShader *sh = st >= 0 ? shader_get([k stringByAppendingString:@"_b"], st) : nil;
-        if (sh) o->sh[st] = sh; else MDIE("shader %s stage %s failed to load",k.UTF8String,zh.UTF8String);
+    NSMutableArray *keys=[NSMutableArray new],*sources=[NSMutableArray new],*facts=[NSMutableArray new];
+    for(unsigned i=0;i<p->nstage;i++) {
+        NSString *source=short_hash([NSData dataWithBytes:p->sd[i].control length:0x880]);
+        NSDictionary *state=runtime_shader_facts(&p->sd[i]);
+        NSData *encoded=[NSJSONSerialization dataWithJSONObject:@{@"capture":source,@"facts":state} options:NSJSONWritingSortedKeys error:nil];
+        [sources addObject:source];[keys addObject:short_hash(encoded)];[facts addObject:state];
     }
-    if (p->serial) serial_put(p->serial, o);
-    return o;
+    NSString *identity=[keys componentsJoinedByString:@":"];
+    NvProg *cached=programs[identity];if(cached)return cached;
+    if(programs.count>=65536)MDIE("Runtime shader variant limit exceeded");
+    NvProg *program=[NvProg new];
+    for(NSUInteger i=0;i<keys.count;i++) {
+        NSString *key=keys[i],*stageName=g_shmap[key];
+        if(!stageName) {
+            const char *compiler=getenv("DM_SHADER_COMPILER"),*dump=getenv("DM_SHADER_DUMP"),*python=getenv("NSP_PYTHON");
+            if(!compiler || !dump)MDIE("Runtime shader compiler is not configured");
+            NSString *path=[NSString stringWithFormat:@"%s/%@.facts.json",dump,key];
+            NSData *data=[NSJSONSerialization dataWithJSONObject:facts[i] options:NSJSONWritingSortedKeys error:nil];
+            NSError *error=nil;
+            if(![data writeToFile:path options:NSDataWritingAtomic error:&error])MDIE("Runtime shader facts could not be saved");
+            MLOG("First-use shader %s: variant %s",[sources[i] UTF8String],key.UTF8String);
+            NSTask *task=[NSTask new];task.executableURL=[NSURL fileURLWithPath:python?@(python):@"/usr/bin/python3"];
+            task.arguments=@[@(compiler),@(dump),@"--key",key,@"--source-key",sources[i],@"--facts",path];
+            if(![task launchAndReturnError:&error])MDIE("Runtime shader compiler could not start");
+            [task waitUntilExit];
+            if(task.terminationStatus){atomic_fetch_add(&native_shader_failures,1);MDIE("Runtime shader compilation failed: key=%s",key.UTF8String);}
+            NSString *map=[NSString stringWithContentsOfFile:g_shmap_path encoding:NSUTF8StringEncoding error:nil];
+            for(NSString *line in [map componentsSeparatedByString:@"\n"]) {
+                if(!line.length || [line hasPrefix:@"#"])continue;
+                NSArray *columns=[line componentsSeparatedByString:@"\t"];
+                if(columns.count==4){g_shmap[columns[3]]=columns[2];[g_c1_full addObject:[columns[3] stringByAppendingString:@"_b"]];}
+            }
+            stageName=g_shmap[key];
+        }
+        int stage=stage_of(stageName);
+        NvShader *shader=stage>=0?shader_get([key stringByAppendingString:@"_b"],stage):nil;
+        if(!shader)MDIE("Runtime shader variant failed to load: %s",key.UTF8String);
+        program->sh[stage]=shader;
+    }
+    programs[identity]=program;return program;
 }
 void mtl_prog_release(prog_t *p) { if (p->serial) serial_del(p->serial); }
 
@@ -2335,6 +2321,7 @@ static struct {
     p_poly_offset po; float vp[16][4]; float dr[2]; int has_vp;
     float blend_color[4]; int64_t copy_stride;
 } S;
+#include "nvn_runtime_facts.inc"
 // NVN stages may be bound independently; Unity uses separate VS and FS programs.
 // Cache immutable combinations so command-state snapshots keep valid program pointers.
 static const prog_t *bind_program_stages(const p_bind_program *b) {
@@ -2792,7 +2779,7 @@ static int encode_args(id<MTLCommandEncoder> en, NvShader *sh, int nvn_stage, in
 #endif
     static uint64_t bl_pass[6]; static int bl_all = -1; if (bl_all < 0) bl_all = getenv("DM_NVN_PASSDUMP_ALL") != NULL;   // Record on every new encode (otherwise only the first time per pass per stage)
     int bl = passdump() && (bl_all || bl_pass[nvn_stage] != g_stat_pass);
-    if (bl) { bl_pass[nvn_stage] = g_stat_pass; PD("K %llu st%d key=%s nb=%d", g_stat_pass, nvn_stage, sh->key[0] ? sh->key : sh->builtin ? sh->builtin : "?", sh->rf.nb); }
+    if (bl) { bl_pass[nvn_stage] = g_stat_pass; PD("K %llu st%d key=%s nb=%d", g_stat_pass, nvn_stage, sh->key[0] ? sh->key : "?", sh->rf.nb); }
     pthread_mutex_lock(&g_rmu);   // The texture / sampler registration tables may be being grown or rewritten by the game thread
     for (int i = 0; i < sh->rf.nb; i++) {
         const nvn_rbind *b = &sh->rf.b[i];
@@ -4574,23 +4561,6 @@ static void dispatch(const p_dispatch *dp) {
         pso_record("C\t%s\n", cs->key);
         if (cs->key[0]) pso_user_record("C\t%s\n", cs->key);
         hm_put_id(&g_cps, &k, ps);
-    }
-    if (cs->builtin) {   // Built-in compute kernel: n = uniform buffer 0, src = storage buffer 0, dst = storage buffer 1
-        const p_bind_buf *u = &S.ubo[5][0], *a0 = &S.ssbo[5][0], *a1 = &S.ssbo[5][1];
-        void *ub, *sb, *db; uint64_t uo, so, dof;
-        if (!mtl_addr(u->addr, 4, &ub, &uo) || !mtl_addr(a0->addr, 8, &sb, &so) || !mtl_addr(a1->addr, 8, &db, &dof)) { RED_ONCE(30, "内嵌计算核 %s 的缓冲没绑全", cs->builtin); return; }
-        if (!cs->logged++) {
-            module_t *m = module_of((void *)dp->caller);
-            MLOG("内嵌计算核 %s 首次派发：调用点 %s+%#llx，线程组 %dx%dx%d，元素数（CPU 侧当前值）%u", cs->builtin, m ? m->name : "?",
-                 m ? (unsigned long long)(dp->caller - (uint64_t)m->base) : (unsigned long long)dp->caller, dp->x, dp->y, dp->z, *(uint32_t *)u->addr);
-        }
-        rp_end(); if (g_blit) { enc_b_end(g_blit); g_blit = nil; }
-        id<MTLComputeCommandEncoder> ce = pg_compute();
-        enc_c_pso(ce, ps);
-        enc_c_args(ce, ((__bridge id<MTLBuffer>)ub).gpuAddress + uo, 0); enc_c_args(ce, ((__bridge id<MTLBuffer>)sb).gpuAddress + so, 1); enc_c_args(ce, ((__bridge id<MTLBuffer>)db).gpuAddress + dof, 2);   // Built-in compute kernel: cold path, take the addresses directly
-        enc_c_dispatch(ce, MTLSizeMake(dp->x, dp->y, dp->z), MTLSizeMake(32, 1, 1));
-        enc_c_end(ce);
-        return;
     }
     const uint16_t *tg = cs->rf.tg;
     if (!tg[0]) { RED_ONCE(29, "计算着色器缺线程组大小反射"); return; }

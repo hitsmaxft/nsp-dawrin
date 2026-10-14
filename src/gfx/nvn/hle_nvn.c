@@ -1,3 +1,4 @@
+#include <errno.h>
 // NVN interface layer: takes over the nvnBootstrapLoader imported by main; the NVN driver in sdk is not executed at all.
 // All 523 NVN names return counting thunks (nvn_thunks.S), and the thunks forward to the implementations here:
 //   - those with semantics (device / memory pools / textures and samplers / queue / window / sync / events / command buffer memory) are implemented per NVN semantics, and the objects are real;
@@ -409,21 +410,29 @@ static void program_clear(prog_t *p) {
     p->nstage=0;
 }
 NVN(nvnProgramFinalize, void, NVNprogram *p) { program_clear((prog_t *)p); ((prog_t *)p)->magic = 0; }
+static pthread_mutex_t capture_lock=PTHREAD_MUTEX_INITIALIZER;
+static void publish_capture(const char *directory,const char *key,const char *suffix,const void *bytes,size_t size) {
+    char temporary[4096],path[4096];
+    if(snprintf(temporary,sizeof temporary,"%s/%s.tmp-XXXXXX",directory,key)>=(int)sizeof temporary ||
+       snprintf(path,sizeof path,"%s/%s.%s",directory,key,suffix)>=(int)sizeof path)die("Shader capture path exceeds limit");
+    int fd=mkstemp(temporary);if(fd<0)die("Cannot create shader capture");
+    size_t done=0;while(done<size){ssize_t count=write(fd,(const char *)bytes+done,size-done);if(count<0 && errno==EINTR)continue;if(count<=0)die("Cannot write shader capture");done+=count;}
+    if(close(fd) || rename(temporary,path))die("Cannot publish shader capture");
+}
 static void dump_shader(const NVNshaderData *sd) {
-    const char *dir=getenv("DM_SHADER_DUMP");if(!dir)return;
-    uint8_t hash[CC_SHA256_DIGEST_LENGTH];char key[17],path[4096];
-    CC_SHA256(sd->control,0x880,hash);
+    const char *directory=getenv("DM_SHADER_DUMP");if(!directory)return;
+    uint8_t hash[32];char key[17],path[4096];CC_SHA256(sd->control,0x880,hash);
     for(int i=0;i<8;i++)snprintf(key+2*i,3,"%02x",hash[i]);
-    snprintf(path,sizeof path,"%s/%s.control",dir,key);
-    if(access(path,F_OK)==0)return;
+    pthread_mutex_lock(&capture_lock);
+    snprintf(path,sizeof path,"%s/%s.control",directory,key);
+    if(!access(path,F_OK)){pthread_mutex_unlock(&capture_lock);return;}
     uint32_t size;memcpy(&size,(const uint8_t *)sd->control+0x704,4);
-    if(!size || size>(4u<<20))die("shader %s invalid code size %#x",key,size);
-    uint8_t *code=malloc(size);mach_vm_size_t got=0;
-    if(mach_vm_read_overwrite(mach_task_self(),sd->data,size,(mach_vm_address_t)code,&got)!=KERN_SUCCESS || got!=size)die("shader %s code unavailable",key);
-    FILE *f=fopen(path,"wb");if(!f)die("cannot write shader control %s",path);
-    if(fwrite(sd->control,1,0x880,f)!=0x880)die("short shader control write");fclose(f);
-    snprintf(path,sizeof path,"%s/%s.code",dir,key);f=fopen(path,"wb");if(!f)die("cannot write shader code");
-    if(fwrite(code,1,size,f)!=size)die("short shader code write");fclose(f);free(code);
+    if(size<0x80 || size>(4u<<20))die("Invalid shader capture size: key=%s",key);
+    void *code=malloc(size);if(!code)die("Shader capture allocation failed");mach_vm_size_t got=0;
+    if(mach_vm_read_overwrite(mach_task_self(),sd->data,size,(mach_vm_address_t)code,&got)!=KERN_SUCCESS || got!=size)die("Shader code unavailable: key=%s",key);
+    publish_capture(directory,key,"code",code,size);
+    publish_capture(directory,key,"control",sd->control,0x880);
+    free(code);pthread_mutex_unlock(&capture_lock);
 }
 NVN(nvnProgramSetShaders, NVNboolean, NVNprogram *p, int n, const NVNshaderData *sd) {
     prog_t *o = (prog_t *)p;
