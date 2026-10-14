@@ -11,6 +11,16 @@ contents = app / "Contents"
 macos = contents / "MacOS"
 macos.mkdir(parents=True, exist_ok=True)
 shutil.copy2(root.parent / "work/bin/nsp-dawrin", macos / "nsp-dawrin")
+notices = contents / "Resources" / "Licenses"
+notices.mkdir(parents=True, exist_ok=True)
+for name in ("LICENSE", "COPYING"):
+    shutil.copy2(root / name, notices / name)
+for source in (root / "LICENSES").iterdir():
+    if source.is_file():
+        shutil.copy2(source, notices / source.name)
+shutil.copy2(root / "src/third_party/bcdec/LICENSE", notices / "bcdec-LICENSE")
+header = (root / "src/gfx/nvn/include/nvn.h").read_text()
+(notices / "nvn-header-MIT.txt").write_text(header.split("*/", 1)[0] + "*/\n")
 (contents / "Info.plist").write_bytes(plistlib.dumps(dict(
     CFBundleIdentifier="local.nsp-dawrin.runner",
     CFBundleName="nsp-dawrin",
