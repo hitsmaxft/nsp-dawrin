@@ -5,6 +5,8 @@
 #include <signal.h>
 #include <unistd.h>
 #include <mach/mach_time.h>
+#include <mach/mach.h>
+#include <mach/mach_vm.h>
 #include <sys/ucontext.h>
 
 struct dm_flags g_flag;
@@ -66,11 +68,11 @@ static void symbol_at(uint64_t pc) {
 }
 void dm_backtrace(uint64_t fp) {
     for (int i=0; fp && i<24; i++) {
-        uint64_t *frame=(void *)fp;
-        // Read only frames within the current host stack.
-        uint64_t top=(uint64_t)pthread_get_stackaddr_np(pthread_self());
-        size_t size=pthread_get_stacksize_np(pthread_self());
-        if (fp<top-size || fp+16>top || (fp&15)) break;
+        uint64_t frame[2];mach_vm_size_t copied=0;
+        // Guest threads can switch to mapped guest stacks. Probe each frame
+        // through the kernel so an invalid pointer cannot fault recursively.
+        if ((fp&15) || mach_vm_read_overwrite(mach_task_self(),fp,sizeof frame,
+            (mach_vm_address_t)frame,&copied)!=KERN_SUCCESS || copied!=sizeof frame)break;
         module_t *m=module_of((void *)frame[1]);
         LOG("frame %d: %s+%#llx",i,m?m->name:"host",m?frame[1]-(uint64_t)m->base:frame[1]);
         symbol_at(frame[1]);
@@ -88,6 +90,10 @@ static void fault(int sig, siginfo_t *info, void *ctx) {
         u->uc_mcontext->__ss.__x[0],u->uc_mcontext->__ss.__x[1],u->uc_mcontext->__ss.__x[2],
         u->uc_mcontext->__ss.__x[3],u->uc_mcontext->__ss.__x[19],u->uc_mcontext->__ss.__x[20],u->uc_mcontext->__ss.__sp);
     symbol_at(pc);
+    uint64_t lr=u->uc_mcontext->__ss.__lr;
+    module_t *caller=module_of((void *)lr);
+    LOG("fault return address=%s+%#llx",caller?caller->name:"host",caller?lr-(uint64_t)caller->base:lr);
+    symbol_at(lr);
     dm_backtrace(u->uc_mcontext->__ss.__fp);
     _exit(128+sig);
 }
