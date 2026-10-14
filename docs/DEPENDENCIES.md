@@ -101,6 +101,11 @@ at `1d64a83450e025622f3468c28fc4164dad2c5ef6` (`nca.c`, `nca.h`, `bktr.h`,
 flattened range representation. The original ISC notice is retained in
 [LICENSES/hactool-ISC.txt](../LICENSES/hactool-ISC.txt).
 
-Application control property field names and save allocation offsets were checked
-against the libnx authors' [nacp.h](https://github.com/switchbrew/libnx/blob/master/nx/include/switch/nacp.h).
-This is a format reference; libnx source is not bundled or linked.
+Application control fields and save allocation offsets, HIPC descriptors, CMIF
+request/response layouts, and settings command IDs were checked against the libnx
+authors' [source](https://github.com/switchbrew/libnx/tree/feebd026ca0f5dcc2119f46ad8e0d16ad3dd4973)
+at `feebd026ca0f5dcc2119f46ad8e0d16ad3dd4973` (`nacp.h`, `sf/hipc.h`,
+`sf/cmif.h`, `services/sm.c`, `services/set.c`). The independent host transport
+in `src/macos/ipc.c` adapts these layouts to bounded local service dispatch;
+libnx is not linked. Its complete ISC notice is retained in
+[LICENSES/libnx-ISC.txt](../LICENSES/libnx-ISC.txt).
