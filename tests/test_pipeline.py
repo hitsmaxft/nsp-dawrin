@@ -14,6 +14,7 @@ from nsp_runtime.interfaces import AssetScan, Probe, Resource, ShaderBlob
 from nsp_runtime.pipeline import scan
 from nsp_runtime.registry import Registry, UnsupportedEngineError
 from package import Package
+from nsp_runtime.bindings import storage_binding
 
 
 def shader(width=0x850, stage=1):
@@ -107,6 +108,14 @@ class PipelineTests(unittest.TestCase):
             self.assertNotEqual(old, digest_files({'source': path}, {'option': 1}))
             self.assertNotEqual(digest_files({'source': path}, {'option': 1}), digest_files({'source': path}, {'option': 2}))
             self.assertEqual(list(Path(folder).glob('*.tmp-*')), [])
+
+    def test_storage_binding_requires_exact_slot_table(self):
+        for stage, base in (('vs', 0x110), ('ps', 0x510), ('cs', 0x310)):
+            binding = storage_binding(dict(cb_slot=0, cb_offset=(base+32)//4, flags=2), stage)
+            self.assertEqual(binding, dict(kind='sbuf', reg=2, rw=True))
+        for resource in (dict(cb_slot=1, cb_offset=324, flags=0),
+                         dict(cb_slot=0, cb_offset=325, flags=0)):
+            with self.assertRaises(ValueError):storage_binding(resource, 'ps')
 
     def test_resource_reader_clamps_ranges(self):
         package = Package.__new__(Package)

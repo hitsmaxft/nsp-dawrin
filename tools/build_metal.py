@@ -8,6 +8,7 @@ import re
 import subprocess
 from pathlib import Path
 from nsp_runtime.cache import atomic_write, chain_version
+from nsp_runtime.bindings import storage_binding
 
 p = argparse.ArgumentParser()
 p.add_argument("directory", type=Path)
@@ -90,6 +91,9 @@ def convert(job):
                 else:
                     bind.update(kind="drvcb", bank=cb)
                     driver[str(cb)] = True
+        elif category == "ssbos":
+            storage = next(r for r in resources["sbufs"] if r["binding"] == entry["binding"])
+            bind.update(storage_binding(storage, job["stage"]))
         elif category == "textures":
             tex = next(r for r in resources["textures"] if r["binding"] == entry["binding"])
             if tex["array"] != 1:
