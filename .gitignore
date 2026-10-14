@@ -6,8 +6,16 @@ obj/
 .venv/
 *.nsp
 *.xci
+*.nsz
+*.xcz
 *.nca
 *.keys
+*.pem
+*.key
+*.p12
+*.pfx
+.env
+.env.*
 
 *.tik
 *.cert
@@ -24,4 +32,9 @@ package-index.json
 /vfs/
 /save/
 /shaders/
+/CrashReports/
+/crash-reports/
+runtime.log
+report.json
+agent-prompt.md
 *.app/
