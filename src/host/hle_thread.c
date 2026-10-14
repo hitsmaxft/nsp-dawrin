@@ -42,6 +42,8 @@ typedef struct thr {
     struct thr *next;          // Wait chain
     struct thr *all;           // All-threads chain (for the state dump)
     int last_svc; uint64_t last_lr;
+    uint32_t sync_handles[4], sync_result;
+    int sync_count, sync_index; int64_t sync_timeout;
     int closed;                // Handle closed: the object is freed only when this holds together with exited (Horizon: the thread object goes away with the last reference)
     uint64_t nsvc;             // SVC count (for the state dump)
     mach_port_t mport;         // Host thread port (to get CPU time)
@@ -367,6 +369,9 @@ void svc_thread_dump(void) {
         fprintf(stderr, "[dm] 线程 %#x 「%s」优先级 %d 核 %d 掩码 %#llx CPU %.2fs svc %llu %s%s%s 等:%s addr=%#llx%s 最近 svc %#x lr=%s+%#llx\n", t->handle, nm, t->prio, t->core, (unsigned long long)t->mask,
                 cpu, t->nsvc, t->exited ? "已退出" : "", t->started ? "" : "未启动", life, kinds[t->wkind & 7], t->waddr, own, t->last_svc,
                 m ? m->name : "?", m ? t->last_lr - (uint64_t)m->base : t->last_lr);
+        if (t->sync_count) fprintf(stderr, "[dm]   Synchronization: count=%d handles=%#x,%#x,%#x,%#x timeout=%lld result=%#x index=%d\n",
+            t->sync_count, t->sync_handles[0], t->sync_handles[1], t->sync_handles[2], t->sync_handles[3],
+            (long long)t->sync_timeout, t->sync_result, t->sync_index);
         if (have_raw) { char hx[200]; int q = 0; for (int i = 0; i < 64; i += 4) q += snprintf(hx + q, sizeof hx - q, "%08x ", *(uint32_t *)(raw + i));
                         fprintf(stderr, "[dm]   %#x 所等对象 %#llx 起 64 字节: %s\n", t->handle, t->waddr & ~0xfull, hx); }
         thr_bt(t);
@@ -609,6 +614,8 @@ int svc_thread(int num, uint64_t *regs) {
         thr_t *t = cur(); const uint32_t *hs = (const uint32_t *)regs[1]; int n = (int)regs[2]; int64_t ns = (int64_t)regs[3];
         int64_t deadline = ns > 0 ? (dm_detclock_enabled() ? (int64_t)guest_ns() : now_mono_ns()) + ns : 0;
         pthread_mutex_lock(&G);
+        t->sync_count = n; t->sync_timeout = ns;
+        for (int i = 0; i < 4; i++) t->sync_handles[i] = i < n ? hs[i] : 0;
         int64_t r; int idx = -1;
         for (;;) {
             if (t->cancel) { t->cancel = 0; r = R_CANCELLED; break; }
@@ -620,6 +627,7 @@ int svc_thread(int num, uint64_t *regs) {
             if (ns > 0 && left <= 0) { r = R_TIMEOUT; break; }
             if (block(t, 4, left) == R_TIMEOUT) { r = R_TIMEOUT; break; }
         }
+        t->sync_result = (uint32_t)r; t->sync_index = idx;
         pthread_mutex_unlock(&G);
         regs[0] = (uint64_t)r; regs[1] = idx >= 0 ? (uint64_t)idx : 0; return 1;
     }
