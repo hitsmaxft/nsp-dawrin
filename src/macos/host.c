@@ -83,6 +83,9 @@ static void fault(int sig, siginfo_t *info, void *ctx) {
     uint64_t pc=u->uc_mcontext->__ss.__pc;
     module_t *m=module_of((void *)pc);
     LOG("native fault signal=%d address=%p pc=%s+%#llx",sig,info->si_addr,m?m->name:"host",m?pc-(uint64_t)m->base:pc);
+    LOG("registers x0=%#llx x1=%#llx x2=%#llx x3=%#llx x19=%#llx x20=%#llx sp=%#llx",
+        u->uc_mcontext->__ss.__x[0],u->uc_mcontext->__ss.__x[1],u->uc_mcontext->__ss.__x[2],
+        u->uc_mcontext->__ss.__x[3],u->uc_mcontext->__ss.__x[19],u->uc_mcontext->__ss.__x[20],u->uc_mcontext->__ss.__sp);
     symbol_at(pc);
     dm_backtrace(u->uc_mcontext->__ss.__fp);
     _exit(128+sig);

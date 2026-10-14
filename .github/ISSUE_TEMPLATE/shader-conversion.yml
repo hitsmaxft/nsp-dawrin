@@ -1,0 +1,44 @@
+name: Shader conversion
+description: Report a scan, translation, binding, Metal compilation, or loading failure.
+title: "[shader] "
+body:
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Failing stage
+      options:
+        - Asset scan or engine detection
+        - GPU blob decoding
+        - Shader metadata
+        - SPIR-V translation
+        - Resource binding
+        - Metal compilation
+        - Runtime shader loading or rendering
+        - Cache or concurrent preparation
+    validations:
+      required: true
+  - type: input
+    id: engine
+    attributes:
+      label: Engine adapter and version
+      placeholder: "Adapter name, engine version if known"
+  - type: textarea
+    id: report
+    attributes:
+      label: Diagnostic report
+      description: Paste the JSON from tools/shader_report.py for the affected shader directory.
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction and expected result
+      description: Include the command, cold or warm cache, and whether another preparation process was running. Replace private paths with placeholders.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Focused error or synthetic reproducer
+      description: Prefer a short error excerpt or a minimal synthetic shader record. Keep application binaries, extracted shaders, and keys out of attachments.

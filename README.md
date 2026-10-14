@@ -40,6 +40,26 @@ GAME_DIR=/path/cache DM_WINDOW=1 DM_TIMEOUT=0 ./run.sh
 
 The app bundle uses the same `GAME_DIR` and local checkout. `DOTNET` can select an SDK executable outside PATH.
 
+## Startup check
+
+```sh
+python tools/smoke.py /path/cache --timeout 90
+```
+
+The check launches one session, waits for loaded shaders and continuing frames,
+checks the input API, and stops its own process. It writes `validation/smoke.json`
+and `validation/runtime.log` in the cache. `rendering_started` confirms rendering
+startup; menu interaction and save/load can then be exercised through the CLI.
+
+Generated MSL can also be compiled in advance through the native Metal API:
+
+```sh
+../work/bin/warm-metal /path/cache/shaders/metal/b-CHAIN
+python tools/shader_report.py /path/cache/shaders
+```
+
+The second command emits a compact conversion report suitable for a shader issue.
+
 ## Controls
 
 Mouse press, drag, and release provide touch input. Coordinates follow window resizing. The first connected extended-profile controller maps to player one, including sticks, face buttons, direction pad, shoulders, triggers, and menu buttons.

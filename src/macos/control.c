@@ -8,6 +8,7 @@
 #include <errno.h>
 #include "controller.h"
 extern _Atomic uint64_t native_package_reads, native_package_bytes;
+extern _Atomic uint64_t native_shader_loads, native_shader_failures;
 extern _Atomic uint64_t native_buttons;
 extern _Atomic uint64_t native_touch_samples,native_touch_contacts;
 extern uint64_t dm_nvn_frame_count(void);
@@ -38,7 +39,7 @@ static void *control_loop(void *unused) {
                 dm_gfx_shot_at(1,line+5);dprintf(fd,"{\"queued\":true}\n");
             } else if(!strcmp(line,"status")) {
                 NativePad pad=native_controller_read();
-                dprintf(fd,"{\"pid\":%d,\"frames\":%llu,\"buttons\":%llu,\"touch_samples\":%llu,\"touch_contacts\":%llu,\"controller_connected\":%u,\"controller_buttons\":%llu,\"sticks\":[%d,%d,%d,%d],\"package_reads\":%llu,\"package_bytes\":%llu}\n",getpid(),dm_nvn_frame_count(),atomic_load(&native_buttons),atomic_load(&native_touch_samples),atomic_load(&native_touch_contacts),pad.connected,pad.buttons,pad.lx,pad.ly,pad.rx,pad.ry,atomic_load(&native_package_reads),atomic_load(&native_package_bytes));
+                dprintf(fd,"{\"pid\":%d,\"frames\":%llu,\"buttons\":%llu,\"touch_samples\":%llu,\"touch_contacts\":%llu,\"controller_connected\":%u,\"controller_buttons\":%llu,\"sticks\":[%d,%d,%d,%d],\"package_reads\":%llu,\"package_bytes\":%llu,\"shader_loads\":%llu,\"shader_failures\":%llu}\n",getpid(),dm_nvn_frame_count(),atomic_load(&native_buttons),atomic_load(&native_touch_samples),atomic_load(&native_touch_contacts),pad.connected,pad.buttons,pad.lx,pad.ly,pad.rx,pad.ry,atomic_load(&native_package_reads),atomic_load(&native_package_bytes),atomic_load(&native_shader_loads),atomic_load(&native_shader_failures));
             } else dprintf(fd,"{\"error\":\"expected status, buttons MASK, or shot /PATH\"}\n");
         }
         fclose(f);
