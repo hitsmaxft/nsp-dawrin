@@ -20,6 +20,10 @@ for source in (root / "LICENSES").iterdir():
     if source.is_file():
         shutil.copy2(source, notices / source.name)
 shutil.copy2(root / "src/third_party/bcdec/LICENSE", notices / "bcdec-LICENSE")
+shutil.copy2(root / "src/third_party/h264-interface/NOTICE", notices / "AOSP-AVC-NOTICE")
+shutil.copy2(root / "src/third_party/openmax-interface/NOTICE", notices / "OpenMAX-NOTICE")
+for source in (root / "src/third_party/openmax-interface").glob("*.h"):
+    shutil.copy2(source, notices / source.name)
 header = (root / "src/gfx/nvn/include/nvn.h").read_text()
 (notices / "nvn-header-MIT.txt").write_text(header.split("*/", 1)[0] + "*/\n")
 (contents / "Info.plist").write_bytes(plistlib.dumps(dict(
