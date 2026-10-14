@@ -4995,6 +4995,8 @@ void mtl_exec(const uint8_t *p) {
     int trace = dump_all && passdump();   // Normal mode does not check the frame range per operation; the full command position is only used for the designated diagnostic frames
     for (;;) {
         op_hdr h; memcpy(&h, p, sizeof h);
+        if (h.op>=OP_COUNT_ || h.size<8 || (h.size&7) || h.size>(128u<<20))
+            MDIE("Invalid command record: address=%p opcode=%u size=%u",p,h.op,h.size);
         g_exec_cur = p;   // Scan start point of the store lookahead: the operation that ends the render pass (inclusive)
         if (p == g_defer_pend) { for (int gi = 0; gi < 4; gi++) if (g_defer_slots[gi].active && g_defer_slots[gi].p_end_op == p) g_defer_slots[gi].in_p = 0; g_defer_pend = NULL; }
         sdx_seq(p);

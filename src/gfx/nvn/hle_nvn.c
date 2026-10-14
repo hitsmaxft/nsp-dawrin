@@ -15,6 +15,7 @@
 #include "nvn_tex.h"
 #include "nvn_mtl.h"
 #include "nvn_pace.h"
+#include "nvn_commands.h"
 #include "../../host/front.h"
 #include "nvn_dirty.h"
 #include "../tex/nvn_deswizzle.h"
@@ -601,8 +602,13 @@ NVN(nvnCommandBufferEndRecording, NVNcommandHandle, NVNcommandBuffer *c) {
     return (NVNcommandHandle)o->begin;
 }
 NVN(nvnCommandBufferIsRecording, NVNboolean, const NVNcommandBuffer *c) { return ((const cmd_t *)c)->recording != 0; }
+static void *copy_command_allocate(void *context,uint32_t bytes) { return cmd_alloc(context,bytes); }
 NVN(nvnCommandBufferCopyCommands, void, NVNcommandBuffer *c, int n, const NVNcommandHandle *h) {
-    for (int i = 0; i < n; i++) { uint8_t *p = cmd_alloc(CB(c), 16); put_hdr(p, OP_CALL, 16); memcpy(p + 8, &h[i], 8); }
+    if (nvn_copy_commands(n,h,CB(c),copy_command_allocate)) die("Invalid command stream copy");
+}
+NVN(nvnCommandBufferCallCommands, void, NVNcommandBuffer *c, int n, const NVNcommandHandle *h) {
+    if (n<0 || (n&&!h)) die("Invalid command stream call");
+    for (int i=0;i<n;i++) { uint8_t *p=cmd_alloc(CB(c),16);put_hdr(p,OP_CALL,16);memcpy(p+8,&h[i],8); }
 }
 NVN(nvnCommandBufferSignalEvent, void, NVNcommandBuffer *c, const NVNevent *e, NVNeventSignalMode m, NVNeventSignalLocation loc, int flags, uint32_t v) {
     (void)loc; (void)flags;
