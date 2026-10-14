@@ -117,6 +117,8 @@ selects its existing local input device rather than launching a system applet.
 The JPEG profile-image contract also references `services/acc.h` at that revision.
 `src/macos/profile.m` generates an original local avatar using the system graphics
 and image encoding frameworks; no profile artwork is copied or bundled.
+The steady-clock time point and system-clock context layouts in
+`src/host/hle_time.c` reference `services/time.h` at the same libnx revision.
 
 ## Media interface references
 
