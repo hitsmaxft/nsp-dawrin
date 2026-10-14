@@ -62,7 +62,7 @@ The second command emits a compact conversion report suitable for a shader issue
 
 ## Controls
 
-Mouse press, drag, and release provide touch input. Coordinates follow window resizing. The first connected extended-profile controller maps to player one, including sticks, face buttons, direction pad, shoulders, triggers, and menu buttons.
+Mouse press, drag, and release provide touch input. Coordinates follow window resizing. Choose Automatic, Keyboard only, or a connected controller in Settings. The selected extended-profile controller maps to player one, including sticks, face buttons, direction pad, shoulders, triggers, and menu buttons. Default positional mapping supports system-recognized Xbox and Pro controllers.
 
 | Keyboard | Input |
 | --- | --- |
@@ -73,7 +73,29 @@ Mouse press, drag, and release provide touch input. Coordinates follow window re
 | Return | Primary menu |
 | Arrow keys | Direction pad |
 
-Handheld mode uses 720p. Set `DM_HANDHELD=0` for 1080p console mode.
+## Menus and settings
+
+Open **nsp-dawrin → Settings…** with **⌘,**. Use **View → Enter Full Screen** or **⌃⌘F** to toggle full screen.
+
+- **System mode:** handheld (720p) or console (1080p), applied on the next game launch. `DM_HANDHELD` overrides the saved mode for that launch.
+- **Display output:** automatic window/display sizing, 1280 × 720, or 1920 × 1080. Changes apply immediately to the presented image; the game chooses its internal render resolution. Full-screen output keeps a 16:9 aspect ratio.
+- **Keyboard:** click one of the 24 binding buttons, then press a key. Bindings cover buttons, direction pad, and both sticks. Assigning an occupied key moves it to the selected action. Shift, Control, and Option keys are supported; Command shortcuts remain available for menus. Clear an individual binding or restore the defaults with Reset Keyboard.
+- **Controller:** switch the active device immediately, use automatic selection, or disable controller input with Keyboard only. The preferred model is remembered; with multiple identical devices, select the desired device again after restarting.
+
+Settings are saved to `~/Library/Application Support/nsp-dawrin/settings.json`. Keyboard and controller input are released when the game loses focus.
+
+The control API exposes the same settings for automation:
+
+```sh
+python tools/control.py settings
+python tools/control.py settings show
+python tools/control.py settings '{"resolution":1080,"fullscreen":true}'
+python tools/control.py settings '{"mode":"console"}'
+python tools/control.py controller none
+python tools/control.py controller auto
+```
+
+Use a device ID from `settings` with `controller DEVICE_ID` to select a particular connected device. IDs last for the current host session.
 
 ## CLI and OCR
 

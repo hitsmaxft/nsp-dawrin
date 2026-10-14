@@ -9,7 +9,7 @@ import time
 from ocr import recognize
 
 p = argparse.ArgumentParser(description=__doc__)
-p.add_argument("command", choices=["status", "press", "shot", "state", "click"])
+p.add_argument("command", choices=["status", "press", "shot", "state", "click", "settings", "controller"])
 p.add_argument("value", nargs="?")
 p.add_argument("--socket", default=f"/tmp/nsp-dawrin-{os.getuid()}.sock")
 p.add_argument("--game-dir", type=Path, default=Path(os.environ.get("GAME_DIR", "../work/session")))
@@ -27,7 +27,13 @@ def send(command):
         s.settimeout(3)
         s.connect(args.socket)
         s.sendall((command + "\n").encode())
-        reply = json.loads(s.recv(4096))
+        data = bytearray()
+        while b"\n" not in data:
+            part = s.recv(4096)
+            if not part or len(data)+len(part)>65536:
+                raise RuntimeError("Invalid control response")
+            data.extend(part)
+        reply = json.loads(data)
         if "error" in reply:
             raise RuntimeError(reply["error"])
         return reply
@@ -96,5 +102,11 @@ elif args.command == "shot":
     if not args.value:
         p.error("shot requires a path")
     print(screenshot(args.value))
-else:
+elif args.command == "status":
     print(send("status"))
+elif args.command == "settings":
+    print(json.dumps(send("settings" + (" " + args.value if args.value else "")), indent=2))
+elif args.command == "controller":
+    if not args.value:
+        p.error("controller requires auto, none, or a device ID from settings")
+    print(json.dumps(send("settings controller " + args.value), indent=2))

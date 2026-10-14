@@ -45,7 +45,7 @@ static BOOL valid(NSDictionary *data) {
         id keys=bindings[action];
         if (![keys isKindOfClass:NSArray.class] || [keys count]>4) return NO;
         for (id key in keys) {
-            if (!integer(key,0,127) || [seen containsObject:key]) return NO;
+            if (!integer(key,0,127) || [seen containsObject:key] || [key intValue]==54 || [key intValue]==55) return NO;
             [seen addObject:key];
         }
     }
@@ -79,7 +79,7 @@ BOOL native_settings_update(NSDictionary *patch, NSError **error) {
     if (![NSFileManager.defaultManager createDirectoryAtURL:parent withIntermediateDirectories:YES attributes:nil error:error]) return NO;
     NSData *data=[NSJSONSerialization dataWithJSONObject:next options:NSJSONWritingPrettyPrinted error:error];
     if (!data || ![data writeToURL:settings_url options:NSDataWritingAtomic error:error]) return NO;
-    settings=[next copy];
+    settings=[NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
     [NSNotificationCenter.defaultCenter postNotificationName:NativeSettingsChanged object:nil];
     return YES;
 }
@@ -87,6 +87,16 @@ uint64_t native_settings_key_mask(unsigned short key) {
     NSDictionary *bindings=native_settings_snapshot()[@"bindings"];
     for (NSString *action in bindings) if ([bindings[action] containsObject:@(key)]) return 1ull<<action.intValue;
     return 0;
+}
+uint64_t native_key_modifier(unsigned short key) {
+    switch (key) {
+        case 56: case 60: return NSEventModifierFlagShift;
+        case 58: case 61: return NSEventModifierFlagOption;
+        case 59: case 62: return NSEventModifierFlagControl;
+        case 57: return NSEventModifierFlagCapsLock;
+        case 63: return NSEventModifierFlagFunction;
+        default: return 0;
+    }
 }
 NSString *native_key_label(unsigned short key) {
     // Physical macOS key positions keep bindings independent of the active input method.
@@ -96,6 +106,7 @@ NSString *native_key_label(unsigned short key) {
         @22:@"6",@23:@"5",@24:@"=",@25:@"9",@26:@"7",@27:@"-",@28:@"8",@29:@"0",@30:@"]",@31:@"O",@32:@"U",
         @33:@"[",@34:@"I",@35:@"P",@36:@"Return",@37:@"L",@38:@"J",@39:@"'",@40:@"K",@41:@";",@42:@"\\",
         @43:@",",@44:@"/",@45:@"N",@46:@"M",@47:@".",@48:@"Tab",@49:@"Space",@50:@"`",@51:@"Delete",@53:@"Escape",
+        @56:@"Left Shift",@60:@"Right Shift",@58:@"Left Option",@61:@"Right Option",@59:@"Left Control",@62:@"Right Control",@57:@"Caps Lock",@63:@"Fn",
         @123:@"Left",@124:@"Right",@125:@"Down",@126:@"Up"};
     return labels[@(key)] ?: [NSString stringWithFormat:@"Key %u",key];
 }

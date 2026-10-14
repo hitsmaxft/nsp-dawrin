@@ -1,7 +1,7 @@
 #import <Cocoa/Cocoa.h>
 #include <stdatomic.h>
 #include <assert.h>
-_Atomic uint64_t native_buttons;
+_Atomic uint64_t native_buttons, native_keyboard_buttons;
 static int contact, tx, ty;
 void native_touch(int down, int x, int y) { contact=down;tx=x;ty=y; }
 extern int native_front_init(void);

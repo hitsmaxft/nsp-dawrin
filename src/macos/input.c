@@ -3,6 +3,7 @@
 #include "controller.h"
 // A host controller. The eventual window frontend can set buttons atomically.
 _Atomic uint64_t native_buttons;
+_Atomic uint64_t native_keyboard_buttons;
 _Atomic uint64_t native_touch_samples;
 _Atomic uint64_t native_touch_contacts;
 static _Atomic uint64_t sampling;
@@ -47,8 +48,13 @@ static void fill(State *s,const uint32_t *id,uint32_t style) {
     memset(s,0,sizeof *s);s->sampling=++sampling;
     if (*id==0 && style==1) {
         NativePad pad=native_controller_read();
-        s->attributes=1;s->buttons=native_buttons | pad.buttons;
+        uint64_t keys=atomic_load(&native_keyboard_buttons);
+        s->attributes=1;s->buttons=native_buttons | keys | pad.buttons;
         s->lx=pad.lx;s->ly=pad.ly;s->rx=pad.rx;s->ry=pad.ry;
+        if (!s->lx) s->lx=32767*((int)((keys>>18)&1)-(int)((keys>>16)&1));
+        if (!s->ly) s->ly=32767*((int)((keys>>17)&1)-(int)((keys>>19)&1));
+        if (!s->rx) s->rx=32767*((int)((keys>>22)&1)-(int)((keys>>20)&1));
+        if (!s->ry) s->ry=32767*((int)((keys>>21)&1)-(int)((keys>>23)&1));
         pthread_once(&input_once,parse_input_script);
         double seconds=(now_ns()-g_t0_ns)/1e9;
         for(int i=0;i<input_count&&input_steps[i].seconds<=seconds;i++)s->buttons=input_steps[i].buttons;

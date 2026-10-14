@@ -20,7 +20,8 @@ Inspect processes and mounts before cleanup. A work directory can contain live n
 | `src/host/loader.c` | Module layout, relocation, symbol lookup and forced host imports |
 | `src/host/hle_*.c` | Guest service implementations and host bridges |
 | `src/macos/host.c` | Native entry, process setup and fault reporting |
-| `src/macos/controller.*`, `input.c`, `window.m` | Controller normalization, guest input sampling and mouse touch |
+| `src/macos/controller.*`, `input.c`, `window.m` | Controller selection and normalization, guest input sampling, menus and mouse touch |
+| `src/macos/settings.*`, `settings_ui.*` | Validated persistent preferences and native settings UI |
 | `src/gfx/nvn/hle_nvn.c` | NVN ABI and command recording |
 | `src/gfx/nvn/nvn_mtl.m` | Metal replay, shader loading, resource binding and pipeline state |
 | `tools/nsp_runtime/` | Engine, decoder, facts, translation and cache contracts |
@@ -69,3 +70,11 @@ Record each adopted library, copied algorithm, header, generated definition, and
 Audit the actual build graph, including Python and NuGet transitive dependencies, when packaging a binary release. Ship the applicable license texts and notices with bundled components. Distinguish original upstream work, local adaptations, and independent contributors; do not copy another author's apology or claim an upstream contributor worked directly on this project. Do not label an adapted subset as unmodified.
 
 After completing and validating a coherent feature or fix, make one focused unsigned commit with its relevant checks. Stage explicit paths; keep unrelated work for its own commit. Commit attribution and license changes independently from runtime features.
+
+## macOS settings and input
+
+Initialize settings before starting guest threads. Preference snapshots, updates, controller discovery/selection and UI actions run on the main thread; the control socket dispatches them there. The active guest mode is immutable during a session. Resolution controls the Metal drawable, not application-internal render targets. Do not fake live mode switching without implementing the guest notification and reconfiguration protocol.
+
+Keep CLI-injected input separate from held keyboard keys; recompute keyboard buttons from all held physical keys so releasing one alias does not release another. Clear held input on focus loss and preference changes. Controller device IDs identify live framework objects; persisted vendor/category preferences identify a model, not a guaranteed physical-device serial number. An explicit device disconnect must not silently transfer held input to another identical controller.
+
+`tests/settings.m` checks persistence across processes and virtual controller selection. `tests/settings_ui.m` exercises real AppKit menu actions, key capture, focus release, drawable resolution and fullscreen transitions. Run both with a fresh `NSP_SETTINGS_PATH` outside the checkout; this keeps the user's preferences unchanged. Full-screen tests need an unlocked foreground macOS session. `--skip-fullscreen` runs the independent menu/input/resolution checks while explicitly reporting that skip. Reuse `../work/bin` for their small executables.
