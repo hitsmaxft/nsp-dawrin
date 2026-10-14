@@ -111,3 +111,12 @@ The independent host transport
 in `src/macos/ipc.c` adapts these layouts to bounded local service dispatch;
 libnx is not linked. Its complete ISC notice is retained in
 [LICENSES/libnx-ISC.txt](../LICENSES/libnx-ISC.txt).
+
+## Media interface references
+
+Software codec selection uses the public creation flags documented by the Android
+Open Source Project in [OMXCodec.h](https://android.googlesource.com/platform/frameworks/base/+/569584be0e51ca6aceb53aa81b5ecac23d1ca55b/include/media/stagefright/OMXCodec.h)
+(revision `569584be0e51ca6aceb53aa81b5ecac23d1ca55b`, Apache-2.0).
+`src/host/hle_media.c` calls the guest's own selector; no codec implementation is
+copied or bundled. Transfer-memory syscall contracts were checked against the
+libnx authors' `kernel/svc.h` at the libnx revision recorded above (ISC).
