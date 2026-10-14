@@ -177,7 +177,8 @@ uint64_t svc_dispatch(int num, uint64_t *regs, uint64_t orig_addr) {
         case I_TotalMem: case I_TotalNonSys: v = app_pool(); break;
         case I_UsedMem:  case I_UsedNonSys:  v = g_heap_cur + image_bytes(); break;   // Used = heap + image, the same accounting as the check in SetHeapSize (it used to be hard-coded to 64 MB). The sdk's QueryMemoryInfo (sdk+0x34f4ec) only uses it to compute the "program usage" field;
                                                  // The "total available" field is simply the pool total, so at startup the game still has to step down from the whole pool by 2 MB at a time until pool - image (about 34 refusals) when setting its heap -- this is how the original behaves on the real device, not a mistake in our accounting
-        case I_SysResTotal: v = 0x2000000; break; case I_SysResUsed: v = 0x400000; break;
+        // The host implements the contiguous heap, not the guest virtual-memory resource budget.
+        case I_SysResTotal: case I_SysResUsed: v = 0; break;
         case I_DebuggerAttached: v = 0; break;
         case I_RandomEntropy: { uint64_t dm_entropy64(void); v = dm_entropy64(); break; }   // a deterministic stream when DM_DETCLOCK is on (hle_os.c)
         case I_ProgramId:
