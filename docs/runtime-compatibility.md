@@ -117,3 +117,7 @@ a commit may contain settings alone. Confirm a progress save in the application
 and reload it in a new process. `control.py threads` writes thread states to the
 private runtime log for diagnosing stalls without a debugger attachment. Raw
 thread dumps include guest addresses and must not enter shared crash reports.
+
+OCR capture normally waits at most five seconds for the next rendered frame.
+During first-use compilation, use `control.py state --capture-timeout 30` to
+allow a longer bounded wait; `status` remains available while shaders compile.
