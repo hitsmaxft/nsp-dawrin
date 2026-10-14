@@ -6,6 +6,7 @@
 // Struct layout follows the public Horizon ABI: DirectoryEntry = {char name[0x301], pad[3], s8 type, pad[3], s64 size} (0x310 bytes).
 #include "hle.h"
 #include "front.h"
+#include "dir_count.h"
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -555,6 +556,19 @@ HLE_FORCE("_ZN2nn2fs13ReadDirectoryEPlPNS0_14DirectoryEntryENS0_15DirectoryHandl
         o->type = isdir ? ENT_DIR : ENT_FILE; o->size = isdir ? 0 : dm_data_logical_size(c, st.st_size);
     }
     *count = n; return RES_OK;
+}
+HLE_FORCE("_ZN2nn2fs22GetDirectoryEntryCountEPlNS0_15DirectoryHandleE", "Count host directory entries without consuming the cursor", Result,
+          h_fs_GetDirectoryEntryCount, int64_t *out, uint64_t handle) {
+    PATH_LOCK();
+    dirh_t *directory = (dirh_t *)handle;
+    int64_t count = 0;
+    if (directory->snap) {
+        for (int64_t i=0; i<directory->nsnap; ++i)
+            if (directory->mode & (directory->snap[i].type == ENT_DIR ? DIRMODE_DIR : DIRMODE_FILE)) count++;
+    } else count = dm_directory_entry_count(directory->d, directory->path, directory->mode);
+    if (count < 0) return RES_FAIL;
+    *out = count;
+    return RES_OK;
 }
 HLE_FORCE("_ZN2nn2fs14CloseDirectoryENS0_15DirectoryHandleE", "fsp-srv → closedir(3)", void, h_fs_CloseDirectory, uint64_t hh) {
     dirh_t *h = (dirh_t *)hh; closedir(h->d); if (h->od) closedir(h->od); free(h->snap); free(h);
