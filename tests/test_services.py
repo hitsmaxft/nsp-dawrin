@@ -12,5 +12,10 @@ class ServiceTests(unittest.TestCase):
                      '_ZN2nn2fs15GetSaveDataSizeEPlS1_RKNS_7account3UidE'):
             self.assertIn(name,bindings)
         self.assertNotIn('_ZN2nn3aoc16CountAddOnContentEv',bindings)
+        # Media HeapObject allocations share the SDK's graphics allocator state.
+        # Recording only host callbacks leaves NvOsAlloc without its allocator.
+        for name in bindings:
+            self.assertNotIn('SetGraphicsAllocator',name)
+            self.assertNotIn('SetGraphicsDevtoolsAllocator',name)
 
 if __name__=='__main__':unittest.main()
