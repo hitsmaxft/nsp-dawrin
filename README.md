@@ -30,6 +30,9 @@ The runner is built at `../work/bin/nsp-dawrin`. Build objects are shared in `..
 python tools/launch.py /path/application.nsp --keys /path/local.keys
 ```
 
+Shaders are captured and compiled on first use by default. Use `--shaders prewarm`
+to scan a supported engine before launch.
+
 Preparation results are cached under `~/Library/Caches/nsp-dawrin`. Use `--cache-root /path/cache` to choose a location, `--prepare-only` to prepare without launching, and `--engine` to select an adapter.
 
 For an existing prepared session:
@@ -72,6 +75,8 @@ python tools/shader_report.py /path/cache/shaders
 ```
 
 The second command emits a compact conversion report suitable for a shader issue.
+
+For several prepared applications, use the [batch compatibility workflow](docs/runtime-compatibility.md) to group failures by shared interface.
 
 ## Controls
 
@@ -148,6 +153,7 @@ This project builds on the work of many authors and maintainers. In particular, 
 - **h1k421** for the MIT-licensed `nvn.h` graphics interface declarations.
 - **Sergii Kudlai (iOrange)** for [bcdec](https://github.com/iOrange/bcdec), used for BC texture decoding under its MIT license option.
 - **SciresM** for [hactool](https://github.com/SciresM/hactool), used as a reference for content container and patch-storage layouts.
+- **libnx authors and contributors** for [libnx](https://github.com/switchbrew/libnx), used as a reference for content metadata and host service protocols.
 - **Khronos Group and SPIRV-Cross contributors** for the SPIR-V definitions and [SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross) translation to Metal Shading Language.
 - **UnityPy, cryptography, python-lz4, Capstone, Unicorn, Tesseract, Python, .NET, and LLVM contributors**, and the maintainers of their dependencies, for asset inspection, package reading, instruction verification, OCR, and the build tools.
 

@@ -4,13 +4,16 @@ The contracts live in `tools/nsp_runtime/interfaces.py`. Modules receive resourc
 
 | Boundary | Contract | Current implementation |
 | --- | --- | --- |
-| Package resources | `ResourceReader.iter_resources`, `read_resource` | `package.Package`; bounded reads from the original base package |
+| Package resources | `ResourceReader.iter_resources`, `read_resource` | `content.ContentSet`; base/update virtual ranges, separate add-on mounts |
 | Engine asset layout | `EngineAdapter.probe`, `scan` | `engines.unity.UnityAdapter`; emits format-tagged blobs |
 | GPU blob layout | `ShaderDecoder.decode` | `formats.nvn.NvnBlobDecoder`; validates two control layouts and vertex/fragment stages |
 | Supplemental metadata | `ShaderFactsProvider.facts_for` | `facts.JsonFactsProvider`; reads optional external metadata |
 | Instruction translation | `TranslationBackend.translate` | `backends.MaxwellSpirvBackend`; bounded subprocess batches |
 | Host shader generation | `ShaderBuildBackend.build` | `backends.MetalSourceBackend`; MSL plus resource binding manifests |
 | Native controller state | `NativePad`, `native_controller_read` | `src/macos/controller.h` and the system framework adapter |
+| Runtime shader metadata | `runtime_shader_facts`, `shader_jobs.prepare` | Bound resource observations and isolated first-use variants |
+| System services | `NativeServiceHandler`, `native_ipc_register` | HIPC/CMIF transport in `src/macos/ipc.h` |
+| Content and storage | `native_content_*`, `native_save_*` | Read-only content inventory and persistent save allocation |
 
 A new engine normally adds only an `EngineAdapter`. Reuse an existing decoder when its GPU blob layout matches. A new package format implements `ResourceReader`, independently of engine parsing. A new GPU format implements `ShaderDecoder`. Unsupported formats, ambiguous detection, malformed extents and unsupported stages are reported; they are not counted as successful coverage.
 
@@ -26,6 +29,11 @@ report = scan(resources, output, engine="my-engine", registry=registry)
 `MyEngineAdapter.scan` yields `AssetScan` records with `ShaderBlob(format, data, label)` values. `probe` returns `Probe(confidence, reason)`; zero means unrecognized. Automatic selection rejects equal highest scores. Use `--engine` on the scanner or launcher to select an adapter explicitly.
 
 ## Supplemental shader facts
+
+The default launcher captures GPU programs at runtime and does not require an
+engine adapter. Asset scanning is an optional prewarm path. See
+[runtime compatibility](runtime-compatibility.md) for isolated shader requests
+and batch regression.
 
 Machine code alone does not establish all texture dimensions, image formats, vertex/output types or compute workgroup properties. An engine parser or runtime-state collector can implement `ShaderFactsProvider`. The current job preparer uses an optional `shader-facts.json` outside the repository, keyed by the 16-character control hash:
 

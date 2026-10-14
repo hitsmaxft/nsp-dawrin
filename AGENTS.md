@@ -7,7 +7,7 @@ Write code, comments, diagnostics and documentation in English. Keep the README 
 Prioritize the native launcher for application packages and associated DLC.
 Standalone converted application export and installer generation are deferred.
 Keep implemented package formats and content-loading capabilities distinct from
-the roadmap; XCI and DLC loading are currently implementation gaps.
+the roadmap; use docs/content-loading.md and docs/runtime-compatibility.md for current boundaries.
 
 ## Ownership and data
 
@@ -19,8 +19,9 @@ Inspect processes and mounts before cleanup. A work directory can contain live n
 
 | Module | Responsibility |
 | --- | --- |
-| `tools/package.py` | Base NSP index, local key handling, executable preparation, bounded resource reads |
-| `src/macos/package_fs.m` | Native random-access reads from package resources |
+| `tools/content.py`, `package.py` | NSP/XCI containers, CNMT selection, BKTR ranges, base/update/DLC resources |
+| `src/macos/package_fs.m`, `content.h`, `storage.*` | Native virtual resource reads, content inventory and persistent save allocation |
+| `src/macos/ipc.*`, `src/host/hle_ipc.c` | Bounded HIPC/CMIF transport and SDK-independent service registry |
 | `tools/patch_nso.py` | x18/TLS virtualization, guest SVC/timer gates, branch rewriting |
 | `src/host/loader.c` | Module layout, relocation, symbol lookup and forced host imports |
 | `src/host/hle_*.c` | Guest service implementations and host bridges |
@@ -40,7 +41,7 @@ Read [docs/interfaces.md](docs/interfaces.md) before extending engine or shader 
 1. Identify the package revision and existing session. Check available disk space, mounted package path, key generation and active runner before preparation. Use the supplied local keys; missing decryption keys are a package prerequisite, not a shader bug.
 2. Run package preparation and check resource counts. Only executable modules and an index should be materialized; resource payloads stay in the package. Compare bounded native reads against independent reference bytes when changing the filesystem layer.
 3. Rewrite every executable module actually present. The loader supports `main`, optional subsdk modules and `sdk`, with a finite module-count guard. An unsupported instruction must stop rewriting. Inspect the instruction and surrounding data flow, implement a generic transformation, and prove argument, register, stack, flag and return-address semantics with focused instruction tests. Never bypass the rewriter assertion or patch a title offset blindly.
-4. Select or implement an engine adapter. Run `scan_shaders.py` and inspect `scan-report.json`. Validate control/code extents and compare key sets on regressions. Empty program tables are valid; unknown layouts and stages must remain visible.
+4. Default to runtime capture and first-use translation. For optional prewarming, select or implement an engine adapter, run `scan_shaders.py`, and inspect `scan-report.json`. Validate control/code extents and compare key sets on regressions. Empty program tables are valid; unknown layouts and stages must remain visible.
 5. Run `compile_pending_shaders.py`. Review `translation-failures.json`, `binding-failures.json`, `facts-report.json` and `build-report.json`. Convert resource reflection to explicit slots; a storage buffer is not an ordinary uniform buffer. Validate stage-specific driver tables and reject unknown mappings.
 6. Compile generated MSL with the native Metal API before runtime acceptance. Launch one session at a time with a bounded timeout and a unique control socket/log path. Check `status` for increasing frames, package reads, shader loads and zero shader failures. Use OCR to confirm application state. One loading frame is not proof of a working menu.
 7. Exercise input and a basic menu transition through CLI/API. If testing save/load, preserve existing saves and verify a successful in-application save followed by reload; an initialized save file or a button click alone is insufficient.
@@ -54,10 +55,11 @@ MSL is compiled by the installed Metal framework. The system's compilation cache
 
 ## Known gaps and diagnostic boundaries
 
-- Package handling currently covers supported base NSP plain/CTR sections. XCI, personalized tickets and update merging require separate implementations.
+- Content loading supports NSP/XCI secure content, base/update selection, basic BKTR patch ranges and separate DLC mounts. Personalized tickets, sparse/compressed storage and deeper BKTR trees need adapters.
 - The asset adapter currently understands serialized assets from one engine family. GPU decoding handles validated vertex/fragment layouts. Additional engines and compute/tessellation coverage need adapters or decoder/backend work.
-- Supplemental texture/image/vertex facts are not yet extracted automatically. Default assumptions are reported, but successful translation with missing facts does not establish correct rendering.
+- Bound texture/image/vertex/output facts are collected at replay. Compute descriptors and unobserved resource types still require explicit metadata; translation with missing facts does not establish correct rendering.
 - Guest exception unwinding depends on valid module metadata and matching guest frame descriptions. Diagnose the first failure, not only the final abort.
+- Media allocation and codec services are not fully covered. A successful shader load followed by a media-thread crash must remain a failed startup result; do not bypass the media call or mark it playable.
 - Some inherited graphics optimizations and diagnostics retain assumptions from the upstream application. Audit them before enabling optimizations on another application; the launcher disables the optional tile-specific path by default.
 - Input currently exposes one controller and one touch contact. Motion, vibration and simultaneous multiplayer need implementation. Virtual controller and native mouse tests do not establish behavior on physical controllers.
 - OCR reports text rectangles, not semantic UI controls. IDs expire and must not be reused across process restarts.
@@ -94,3 +96,5 @@ Initialize settings before starting guest threads. Preference snapshots, updates
 Keep CLI-injected input separate from held keyboard keys; recompute keyboard buttons from all held physical keys so releasing one alias does not release another. Clear held input on focus loss and preference changes. Controller device IDs identify live framework objects; persisted vendor/category preferences identify a model, not a guaranteed physical-device serial number. An explicit device disconnect must not silently transfer held input to another identical controller.
 
 `tests/settings.m` checks persistence across processes and virtual controller selection. `tests/settings_ui.m` exercises real AppKit menu actions, key capture, focus release, drawable resolution and fullscreen transitions. Run both with a fresh `NSP_SETTINGS_PATH` outside the checkout; this keeps the user's preferences unchanged. Full-screen tests need an unlocked foreground macOS session. `--skip-fullscreen` runs the independent menu/input/resolution checks while explicitly reporting that skip. Reuse `../work/bin` for their small executables.
+
+Run `tools/service_catalog.py --check` before startup validation to detect binding conflicts. Use `tools/validate_matrix.py` to group failures by shared interface. See [runtime compatibility](docs/runtime-compatibility.md) for variant metadata, content loading and validation boundaries.
