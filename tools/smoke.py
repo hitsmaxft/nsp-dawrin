@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import socket
+import signal
 import subprocess
 import tempfile
 import time
@@ -29,7 +30,7 @@ def query(path, command):
 def first_failure(log):
     for line in log.splitlines():
         if any(marker in line for marker in ('native fault', 'ASSERT', 'Assertion',
-                                             '【红】', 'unimplemented', 'Unsupported', 'Traceback')):
+                                             '【红】', 'unimplemented', 'Unsupported', 'Traceback', 'Break#', 'FATAL')):
             return line[:1000]
     return None
 
@@ -52,7 +53,7 @@ def run(game_dir, timeout=90, frames=30, stable_seconds=3, output=None):
                    DM_TIMEOUT=str(int(timeout)+5), DM_CONTROL=str(control))
         with (output/'runtime.log').open('w') as log:
             process = subprocess.Popen([str(root/'run.sh')], env=env, stdout=log,
-                                       stderr=subprocess.STDOUT)
+                                       stderr=subprocess.STDOUT,start_new_session=True)
             baseline = None
             try:
                 while time.monotonic()-started < timeout:
@@ -85,12 +86,15 @@ def run(game_dir, timeout=90, frames=30, stable_seconds=3, output=None):
                     time.sleep(0.5)
             finally:
                 if process.poll() is None:
-                    process.terminate()
+                    os.killpg(process.pid,signal.SIGTERM)
                     try:
                         process.wait(timeout=3)
                     except subprocess.TimeoutExpired:
-                        process.kill()
+                        os.killpg(process.pid,signal.SIGKILL)
                         process.wait(timeout=3)
+                # Reap compiler descendants belonging to this test after host failure.
+                try: os.killpg(process.pid,signal.SIGTERM)
+                except ProcessLookupError: pass
     result['seconds'] = round(time.monotonic()-started, 2)
     result['first_failure'] = first_failure((output/'runtime.log').read_text(errors='replace'))
     (output/'smoke.json').write_text(json.dumps(result, indent=2)+'\n')
