@@ -44,6 +44,10 @@ int nvn_refl_from_json(NSDictionary *j, nvn_refl *o, char *err, int errlen) {
             else FAIL("B 绑定种类 %s 未实现（%s）", k.UTF8String, [b[@"msl_name"] UTF8String]);
             if ((r->kind == NVN_RB_CBUF || r->kind == NVN_RB_SAMP || r->kind == NVN_RB_SAMPT || r->kind == NVN_RB_TEX || r->kind == NVN_RB_IMG || r->kind == NVN_RB_TBUF || r->kind == NVN_RB_SBUFP || r->kind == NVN_RB_UBOP) && reg < 0)
                 FAIL("B 绑定 %s 没解出槽号", [b[@"msl_name"] UTF8String]);
+            int limit = r->kind == NVN_RB_IMG ? 32 :
+                (r->kind == NVN_RB_CBUF || r->kind == NVN_RB_SBUFP || r->kind == NVN_RB_UBOP) ? 16 :
+                (r->kind == NVN_RB_SAMP || r->kind == NVN_RB_SAMPT || r->kind == NVN_RB_TEX || r->kind == NVN_RB_TBUF) ? 128 : 0;
+            if (limit && reg >= limit) FAIL("Resource slot %d exceeds %s limit %d", reg, k.UTF8String, limit);
             o->nb++;
         }
         NSDictionary *dr = j[@"drv_reads"];

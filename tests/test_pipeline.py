@@ -14,7 +14,7 @@ from nsp_runtime.interfaces import AssetScan, Probe, Resource, ShaderBlob
 from nsp_runtime.pipeline import scan
 from nsp_runtime.registry import Registry, UnsupportedEngineError
 from package import Package
-from nsp_runtime.bindings import storage_binding, resource_writable
+from nsp_runtime.bindings import storage_binding, resource_writable, image_slot, texture_slot
 
 
 def shader(width=0x850, stage=1):
@@ -119,6 +119,19 @@ class PipelineTests(unittest.TestCase):
         self.assertFalse(resource_writable({'flags':2},'buffer'))
         self.assertFalse(resource_writable({'flags':2},'image'))
         self.assertTrue(resource_writable({'flags':4},'image'))
+
+    def test_image_and_sampled_texture_tables_are_distinct(self):
+        for stage, base in [('cs', 0x120), ('vs', 0x20), ('ps', 0x20)]:
+            for slot in (0, 1, 31):
+                resource = dict(cbuf_slot=2, handle=(base + slot * 8) // 4)
+                self.assertEqual(image_slot(resource, stage), slot)
+            for handle in ((base-8)//4, (base+4)//4, (base+32*8)//4, 0x10000048):
+                with self.assertRaises(ValueError):
+                    image_slot(dict(cbuf_slot=2, handle=handle), stage)
+        with self.assertRaises(ValueError):
+            image_slot(dict(cbuf_slot=3, handle=0x48), 'cs')
+        self.assertEqual(texture_slot(dict(handle=8)), (0, False))
+        self.assertEqual(texture_slot(dict(handle=0x1000005a)), (0, True))
 
     def test_resource_reader_clamps_ranges(self):
         package = Package.__new__(Package)

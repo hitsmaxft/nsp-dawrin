@@ -58,6 +58,15 @@ region. Conflicting supplied facts are rejected. Other control revisions need a
 separate parser or explicit metadata, and static asset scanning remains limited
 to its documented graphics layouts.
 
+Descriptor offsets are decoded by resource category in
+`nsp_runtime.bindings`. Compute image handles use the 32-entry table at byte
+offset `0x120` in driver constant buffer 2; combined sampled handles start at
+`0x20`. Graphics image handles retain their separate `0x20` table. The translator
+uses the same image mapping when requesting format/type facts. Unknown tables
+and out-of-range slots fail preparation, and native reflection checks the slot
+limits again before replay. Add a layout adapter and matching tests for a new
+descriptor convention instead of falling back to an unrelated texture slot.
+
 ## Cache and runtime contract
 
 The conversion chain hashes pipeline sources, binding implementation, actual translator DLLs, the SPIRV-Cross executable, conversion options, and external facts. The translator verifies its embedded source fingerprint before processing jobs. Changed tools or metadata select a new `translated/<chain>` and `metal/b-<chain>` directory. The launcher supplies that same identity to the native loader, which rejects mismatched reflection.

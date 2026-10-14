@@ -8,7 +8,7 @@ import re
 import subprocess
 from pathlib import Path
 from nsp_runtime.cache import atomic_write, chain_version
-from nsp_runtime.bindings import storage_binding, resource_writable
+from nsp_runtime.bindings import storage_binding, resource_writable, texture_slot, image_slot
 
 p = argparse.ArgumentParser()
 p.add_argument("directory", type=Path)
@@ -39,23 +39,6 @@ def cross_compile(path):
             future.set_result((msl, reflection))
         except Exception as error: future.set_exception(error)
     return future.result()
-
-def texture_slot(resource, sampler=False):
-    handle = resource["handle"] & 0xffffffff
-    kind = handle >> 28
-    if kind not in (0,1):raise ValueError(f'Unsupported texture handle kind: {kind}')
-    off = ((handle >> 14) & 0x3fff) if sampler and kind else handle & 0x3fff
-    byte = off * 4
-    if kind:
-        base = 0x568 if sampler else 0x168
-    else:
-        base = 0x20  # Combined texture/sampler handles in NVN driver constant buffer 2.
-    if byte < base or (byte - base) % 8:
-        raise ValueError(f"unmapped NVN texture handle {handle:#x}, sampler={sampler}")
-    slot = (byte - base) // 8
-    if slot >= 128:
-        raise ValueError(f"texture slot out of range: {slot}")
-    return slot, bool(kind)
 
 def convert(job):
     key = job["key"]
@@ -100,7 +83,7 @@ def convert(job):
             tex = next(r for r in resources["images" if category=="images" else "textures"] if r["binding"] == entry["binding"])
             if tex["array"] != 1:
                 raise ValueError(f"{key}: descriptor arrays require explicit mapping")
-            slot, separate = texture_slot(tex, sampler)
+            slot, separate = (image_slot(tex, job["stage"]), False) if category=="images" else texture_slot(tex, sampler)
             bind.update(kind=("samp" if separate else "samp_tex") if sampler else "img" if category=="images" else "tbuf" if "texture_buffer" in typ else "tex", reg=slot)
             if category=="images": bind["rw"]=resource_writable(tex, 'image')
         else:

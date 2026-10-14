@@ -46,10 +46,17 @@ static class SwshXlate
             int start = ((uint)handle >> 28) != 0 ? TexBase : 0x20;
             return (cbufSlot < 0 || (cbufSlot & 0xffff) == 2) && bytes >= start && bytes < start + 128 * 8 && (bytes - start) % 8 == 0 ? (bytes - start) / 8 : -1;
         }
+        int ImageSlot(int handle, int cbufSlot)
+        {
+            int start = (string)_job["stage"] == "cs" ? 0x120 : 0x20;
+            int relative = (handle & 0x3fff) * 4 - start;
+            return cbufSlot == 2 && ((uint)handle >> 28) == 0 && relative >= 0 && relative < 32 * 8 && relative % 8 == 0 ? relative / 8 : -1;
+        }
         public SamplerType QuerySamplerType(int handle, int cbufSlot = -1)
         {
             int slot = TexSlot(handle, cbufSlot);
-            string t = slot >= 0 ? Get("tex", slot) ?? Get("img", slot) : null;
+            int image = ImageSlot(handle, cbufSlot);
+            string t = (string)_job["stage"] == "cs" && image >= 0 ? Get("img", image) : slot >= 0 ? Get("tex", slot) ?? Get("img", slot) : null;
             if (t == null) { Notes.Add($"Missing texture type: handle={handle:X}, cbuf={cbufSlot}, slot={slot}; assuming 2D"); return SamplerType.Texture2D; }
             return t switch
             {
@@ -62,7 +69,7 @@ static class SwshXlate
         }
         public TextureFormat QueryTextureFormat(int handle, int cbufSlot = -1)
         {
-            int slot = TexSlot(handle, cbufSlot);
+            int slot = ImageSlot(handle, cbufSlot);
             string f = _job["img"] is JsonObject t && slot >= 0 && t[slot.ToString()] is JsonObject o ? (string)o["fmt"] : null;
             if (f == null) { Notes.Add($"Missing image format: handle={handle:X}, slot={slot}; assuming R8G8B8A8Unorm"); return TextureFormat.R8G8B8A8Unorm; }
             return Enum.TryParse(f, true, out TextureFormat tf) ? tf : throw new ArgumentException("Unsupported image format metadata");
