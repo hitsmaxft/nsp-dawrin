@@ -135,13 +135,13 @@ and `include/utils/String8.h` at revision `569584be0e51ca6aceb53aa81b5ecac23d1ca
 container or decoder implementation is copied. Codec component names are required
 API identifiers.
 
-The AVC bridge uses the unmodified `H264SwDecApi.h` and `basetype.h` interface
+AVC compatibility research used the unmodified `H264SwDecApi.h` and `basetype.h` interface
 headers from AOSP's `frameworks/av` revision
 `2b6f22dc64d456471a1dc6df09d515771d1427c8`,
 [`media/libstagefright/codecs/on2/h264dec/inc`](https://android.googlesource.com/platform/frameworks/av/+/2b6f22dc64d456471a1dc6df09d515771d1427c8/media/libstagefright/codecs/on2/h264dec/inc/).
 They retain their Android Open Source Project copyright and Apache-2.0 notices
 under `src/third_party/h264-interface/`, alongside the upstream `NOTICE`.
-Only interface headers are vendored. The independent macOS decoder uses Apple's
+These reference headers are not linked decoder code. The independent macOS decoder uses Apple's
 system VideoToolbox, CoreMedia and CoreVideo frameworks, following the
 [decompression session API](https://developer.apple.com/documentation/videotoolbox/vtdecompressionsession-api-collection).
 
@@ -155,3 +155,14 @@ flags, and timestamps. Apache-2.0 and the Khronos permission notice are retained
 in the headers, with the Apache license in the adjacent `NOTICE`.
 The queue adapter follows the public AOSP `SoftAVC` lifecycle and `List` ABI;
 its queue scheduling and native decoder integration are local implementations.
+
+The timestamp reorder window follows the H.264 Annex A decoded-picture-buffer
+limit of 16 frames, also documented by [AOSP libavc](https://android.googlesource.com/platform/external/libavc/+/cd9e51f/encoder/ih264e_utils.h).
+No libavc implementation is copied.
+
+The raw keyboard state and modifier layout reference libnx `services/hid.h`
+(ISC, libnx authors). Physical key mapping uses the macOS SDK virtual key
+positions and standard USB HID keyboard usages; no implementation is copied.
+
+Shared font availability follows libnx `services/pl.h`. The host adapter uses
+CoreText to locate an installed font and maps it read-only; no font is bundled.
