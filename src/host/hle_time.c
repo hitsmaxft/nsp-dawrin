@@ -16,6 +16,33 @@ static int64_t fixed_time(void) {
     return v;
 }
 
+typedef struct { int64_t seconds; uint8_t source[16]; } SteadyClockTimePoint;
+typedef struct { int64_t offset; SteadyClockTimePoint timestamp; } SystemClockContext;
+_Static_assert(sizeof(SteadyClockTimePoint) == 24, "Steady clock time point ABI");
+_Static_assert(sizeof(SystemClockContext) == 32, "System clock context ABI");
+static SystemClockContext local_clock;
+static pthread_once_t clock_once = PTHREAD_ONCE_INIT;
+static int64_t steady_seconds(void) { return fixed_time() >= 0 ? 0 : (int64_t)(now_ns() / 1000000000ull); }
+static void initialize_clock_context(void) {
+    local_clock.timestamp.seconds = steady_seconds();
+    arc4random_buf(local_clock.timestamp.source, sizeof local_clock.timestamp.source);
+    int64_t wall = fixed_time();
+    local_clock.offset = (wall >= 0 ? wall : time(NULL)) - local_clock.timestamp.seconds;
+}
+HLE_FORCE("_ZN2nn4time23StandardUserSystemClock21GetSystemClockContextEPNS0_18SystemClockContextE", "Local wall-clock correlation and stable source identity", Result, h_time_Context, SystemClockContext *out) {
+    if (!out) return RES_FAIL;
+    pthread_once(&clock_once, initialize_clock_context);
+    *out = local_clock;
+    return RES_OK;
+}
+HLE_FORCE("_ZN2nn4time19StandardSteadyClock19GetCurrentTimePointEPNS0_20SteadyClockTimePointE", "Monotonic local clock time point", Result, h_time_Steady, SteadyClockTimePoint *out) {
+    if (!out) return RES_FAIL;
+    pthread_once(&clock_once, initialize_clock_context);
+    *out = local_clock.timestamp;
+    out->seconds = steady_seconds();
+    return RES_OK;
+}
+
 HLE_FORCE("_ZN2nn4time10InitializeEv", "连 time 服务；时钟改取宿主系统时间", Result, h_time_Initialize, void) { return RES_OK; }
 HLE_FORCE("_ZN2nn4time13IsInitializedEv", "time 服务已被接管，恒为已初始化", int, h_time_IsInitialized, void) { return 1; }
 HLE_FORCE("_ZN2nn4time23StandardUserSystemClock14GetCurrentTimeEPNS0_9PosixTimeE", "用户时钟 → 宿主 time()", Result, h_time_GetCurrentTime, int64_t *out) {
