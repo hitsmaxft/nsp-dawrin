@@ -76,6 +76,8 @@ int svc_thread(int num, uint64_t *regs);   // hle_thread.c: thread and synchroni
 uint64_t svc_dispatch(int num, uint64_t *regs, uint64_t orig_addr) {
     { void hlecount_svc(int); hlecount_svc(num); }   // DM_HLECOUNT: svc counts by number
     mem_init();
+    int svc_ipc(int,uint64_t *);
+    if (svc_ipc(num,regs)) return regs[0];
     if (svc_thread(num, regs)) return regs[0];
     { uint64_t svc_host_call(int, uint64_t *); if (num >= 0x80 && svc_host_call(num, regs)) return regs[0]; }   // from 0x80: host calls by cut convention (hle_tact.c)
     switch (num) {
