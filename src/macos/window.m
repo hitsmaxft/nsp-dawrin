@@ -5,6 +5,7 @@
 #include <stdatomic.h>
 #import "controller.h"
 #import "settings.h"
+#include "keyboard.h"
 #import "settings_ui.h"
 
 extern _Atomic uint64_t native_buttons, native_keyboard_buttons;
@@ -14,10 +15,11 @@ static NSWindow *game_window;
 static BOOL held[128], fullscreen_transition;
 static NSMenuItem *fullscreen_item;
 static void release_input(void) {
-    memset(held,0,sizeof held);atomic_store(&native_keyboard_buttons,0);
+    memset(held,0,sizeof held);native_keyboard_publish((const uint8_t *)held);atomic_store(&native_keyboard_buttons,0);
     atomic_store(&native_buttons,0);native_touch(0,0,0);
 }
 static void publish_keys(void) {
+    native_keyboard_publish((const uint8_t *)held);
     uint64_t buttons=0;
     for (unsigned short key=0;key<128;key++) if (held[key]) buttons|=native_settings_key_mask(key);
     atomic_store(&native_keyboard_buttons,buttons);
