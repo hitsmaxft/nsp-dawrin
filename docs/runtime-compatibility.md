@@ -102,19 +102,35 @@ runtime selects the guest's in-process audio renderer through ABI-preserving
 guest aliases when that backend is exported. Renderer completion events are
 promoted from local SDK events to SDK-owned kernel events before being shared
 with service clients. This preserves event signaling and clearing across the
-server/client boundary. Automatic renderer scheduling remains incomplete;
-event creation alone does not prove that audio processing advances.
-Software codec selection remains
-in the guest SDK. Graphics allocator registration is preserved because media
+server/client boundary. Automatic renderers register with the guest command
+manager; the native DSP bridge executes its command batches and waits at the
+reported sample cadence. Device-sink movie audio output is not yet validated.
+Software codec selection uses guest factories, including exported AVC factories
+that are absent from the guest codec registry. Graphics allocator registration is preserved because media
 components share that allocator; a host-only callback record is insufficient.
+
+AVC video uses a separate VideoToolbox decoder backend and OpenMAX queue adapter.
+The adapter preserves guest port transitions and buffer ownership while allowing
+available output buffers to advance independently. Annex B access units, separate
+SPS/PPS, presentation timestamps, reordered frames, flush and end-of-stream drain
+are covered by native tests. The backend bounds dimensions at 8192 and queued
+pixels at 256 MiB; the component currently requires even dimensions. Dynamic
+resolution changes and other video formats need further validation.
+
+Shared font requests map an installed macOS font through CoreText. All supported
+font categories currently use that fallback; vendor-specific private glyphs are
+not supplied. `NSP_SYSTEM_FONT` can select an external TrueType/OpenType font.
+Raw keyboard snapshots use physical key positions independently of controller
+bindings; native tests cover state, modifiers and focus release. Physical
+controller behavior still needs hardware validation.
 
 Transfer-memory handles track a borrowed range and reject overlap and stale
 handles. Compatible host-page offsets use coherent VM aliases. For isolated
 transfers (owner permission None), differing 4 KiB offsets on a 16 KiB host move
 contents at map/unmap ownership boundaries. The runtime does not enforce source
 subpage protection; callers must respect the exclusive-ownership contract.
-Shared transfers with incompatible page offsets are rejected. These paths use
-the application-provided SDK and codecs; no media implementation is bundled.
+Shared transfers with incompatible page offsets are rejected. Media combines
+application-provided SDK interfaces with system macOS decoding frameworks.
 
 The local `control.py status` response includes `audio_callbacks` and
 `save_commits`. A callback proves host audio activity, not audible correctness;
