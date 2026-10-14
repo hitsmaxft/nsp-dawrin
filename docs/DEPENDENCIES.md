@@ -114,6 +114,9 @@ libnx is not linked. Its complete ISC notice is retained in
 The controller-support result and argument header in `src/macos/input.c` also
 reference `applets/hid_la.h` and `services/hid.h` at the same revision. The host
 selects its existing local input device rather than launching a system applet.
+The JPEG profile-image contract also references `services/acc.h` at that revision.
+`src/macos/profile.m` generates an original local avatar using the system graphics
+and image encoding frameworks; no profile artwork is copied or bundled.
 
 ## Media interface references
 
