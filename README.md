@@ -78,6 +78,18 @@ The second command emits a compact conversion report suitable for a shader issue
 
 For several prepared applications, use the [batch compatibility workflow](docs/runtime-compatibility.md) to group failures by shared interface.
 
+## Validated games
+
+Validation snapshot through `33ce145`: each game passed startup, rendered gameplay,
+in-game menu interaction, and progress save/reload in a fresh process. These runs
+reported zero shader loading failures.
+
+| Game | Verified progress | Save scope |
+| --- | --- | --- |
+| Phoenix Wright: Ace Attorney Trilogy | Episode 1 opening dialogue; Options and Save/Load menus | Manual dialogue progress |
+| Two Point Hospital | First hospital; camera tutorial completed, reception construction task reached | Hospital progress via Quick Save |
+| Overcooked! 2 | Tutorial kitchen; movement, lettuce pickup and pause menu | Automatic tutorial checkpoint |
+
 ## Controls
 
 Mouse press, drag, and release provide touch input. Coordinates follow window resizing. Choose Automatic, Keyboard only, or a connected controller in Settings. The selected extended-profile controller maps to player one, including sticks, face buttons, direction pad, shoulders, triggers, and menu buttons. Default positional mapping supports system-recognized Xbox and Pro controllers.
