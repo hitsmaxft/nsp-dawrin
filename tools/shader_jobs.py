@@ -67,7 +67,13 @@ def prepare(directory,chain,key=None,variant=None,runtime_facts=None):
 def prepare_observed(directory, chain):
     """Rebuild observed variants from captures and facts, never from old binaries."""
     directory = Path(directory)
-    previous = json.loads((directory/'jobs.json').read_text())
+    # jobs.json describes only the active toolchain. A first-use compilation
+    # after an upgrade replaces its older rows, but observation receipts and
+    # captured facts remain valid inputs for rebuilding the full variant set.
+    receipts = json.loads((directory/'facts-report.json').read_text())
+    previous = [dict(key=key, source_key=receipt['source_key'])
+                for key, receipt in receipts.items()
+                if receipt.get('source') == 'runtime-state']
     requests = {}
     for job in previous:
         key, source = job['key'], job['source_key']

@@ -90,6 +90,10 @@ class ShaderJobTests(unittest.TestCase):
                 key = hashlib.sha256(encoded).hexdigest()[:16]; identities.append(key)
                 (root/(key+'.facts.json')).write_text(json.dumps(facts))
                 prepare(root, 'old-chain', source, key, facts)
+            # One first-use request on the new chain must not erase the other
+            # observed variants from the subsequent batch warm-up.
+            prepare(root, 'new-chain', source, key, facts)
+            self.assertEqual(len(json.loads((root/'jobs.json').read_text())), 1)
             jobs, failures = prepare_observed(root, 'new-chain')
             self.assertFalse(failures)
             self.assertEqual({job['key'] for job in jobs}, set(identities))
