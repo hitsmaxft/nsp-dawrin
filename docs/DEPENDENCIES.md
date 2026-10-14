@@ -128,3 +128,19 @@ Open Source Project in [OMXCodec.h](https://android.googlesource.com/platform/fr
 `src/host/hle_media.c` calls the guest's own selector; no codec implementation is
 copied or bundled. Transfer-memory syscall contracts were checked against the
 libnx authors' `kernel/svc.h` at the libnx revision recorded above (ISC).
+
+The software codec registry adapter also references AOSP `include/utils/VectorImpl.h`
+and `include/utils/String8.h` at revision `569584be0e51ca6aceb53aa81b5ecac23d1ca55b`
+(Apache-2.0). It uses exported guest constructors and vector operations; no Android
+container or decoder implementation is copied. Codec component names are required
+API identifiers.
+
+The AVC bridge uses the unmodified `H264SwDecApi.h` and `basetype.h` interface
+headers from AOSP's `frameworks/av` revision
+`2b6f22dc64d456471a1dc6df09d515771d1427c8`,
+[`media/libstagefright/codecs/on2/h264dec/inc`](https://android.googlesource.com/platform/frameworks/av/+/2b6f22dc64d456471a1dc6df09d515771d1427c8/media/libstagefright/codecs/on2/h264dec/inc/).
+They retain their Android Open Source Project copyright and Apache-2.0 notices
+under `src/third_party/h264-interface/`, alongside the upstream `NOTICE`.
+Only interface headers are vendored. The independent macOS decoder uses Apple's
+system VideoToolbox, CoreMedia and CoreVideo frameworks, following the
+[decompression session API](https://developer.apple.com/documentation/videotoolbox/vtdecompressionsession-api-collection).
