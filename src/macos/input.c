@@ -48,8 +48,8 @@ static void fill(State *s,const uint32_t *id,uint32_t style) {
     memset(s,0,sizeof *s);s->sampling=++sampling;
     if (*id==0 && style==1) {
         NativePad pad=native_controller_read();
-        uint64_t keys=atomic_load(&native_keyboard_buttons);
-        s->attributes=1;s->buttons=native_buttons | keys | pad.buttons;
+        uint64_t keys=atomic_load(&native_keyboard_buttons)|atomic_load(&native_buttons);
+        s->attributes=1;s->buttons=keys | pad.buttons;
         s->lx=pad.lx;s->ly=pad.ly;s->rx=pad.rx;s->ry=pad.ry;
         if (!s->lx) s->lx=32767*((int)((keys>>18)&1)-(int)((keys>>16)&1));
         if (!s->ly) s->ly=32767*((int)((keys>>17)&1)-(int)((keys>>19)&1));

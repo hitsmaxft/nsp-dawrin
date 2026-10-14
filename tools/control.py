@@ -92,7 +92,8 @@ elif args.command == "click":
     time.sleep(args.settle)
     state()
 elif args.command == "press":
-    buttons = dict(A=0, B=1, X=2, Y=3, L=6, R=7, ZL=8, ZR=9, PLUS=10, MINUS=11, LEFT=12, UP=13, RIGHT=14, DOWN=15)
+    buttons = dict(A=0, B=1, X=2, Y=3, L=6, R=7, ZL=8, ZR=9, PLUS=10, MINUS=11, LEFT=12, UP=13, RIGHT=14, DOWN=15,
+                   LLEFT=16,LUP=17,LRIGHT=18,LDOWN=19,RLEFT=20,RUP=21,RRIGHT=22,RDOWN=23)
     try:
         print(send(f"buttons {1 << buttons[args.value.upper()]}"))
         time.sleep(0.3)
