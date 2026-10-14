@@ -105,7 +105,9 @@ Application control fields and save allocation offsets, HIPC descriptors, CMIF
 request/response layouts, and settings command IDs were checked against the libnx
 authors' [source](https://github.com/switchbrew/libnx/tree/feebd026ca0f5dcc2119f46ad8e0d16ad3dd4973)
 at `feebd026ca0f5dcc2119f46ad8e0d16ad3dd4973` (`nacp.h`, `sf/hipc.h`,
-`sf/cmif.h`, `services/sm.c`, `services/set.c`). The independent host transport
+`sf/cmif.h`, `services/sm.c`, `services/set.c`). CPU loading mode semantics also
+reference [apm.h](https://github.com/switchbrew/libnx/blob/feebd026ca0f5dcc2119f46ad8e0d16ad3dd4973/nx/include/switch/services/apm.h).
+The independent host transport
 in `src/macos/ipc.c` adapts these layouts to bounded local service dispatch;
 libnx is not linked. Its complete ISC notice is retained in
 [LICENSES/libnx-ISC.txt](../LICENSES/libnx-ISC.txt).
