@@ -31,8 +31,11 @@ $(OCR_BIN)/ocr-mask: tools/ocr-mask.swift
 
 $(OUT): $(OBJ)
 	@mkdir -p $(dir $(OUT))
-	$(CC) $(OBJ) $(LIBS) -o $@
-	codesign -s - -f $@
+	@set -eu; stage=$$(mktemp -d "$(dir $@).link-XXXXXX"); \
+	trap 'rm -rf "$$stage"' EXIT HUP INT TERM; \
+	$(CC) $(OBJ) $(LIBS) -o "$$stage/$(notdir $@)"; \
+	codesign -s - -f "$$stage/$(notdir $@)"; \
+	mv -f "$$stage/$(notdir $@)" "$@"
 
 $(BUILD)/%.o: % Makefile
 	@mkdir -p $(BUILD)
