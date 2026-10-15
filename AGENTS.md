@@ -2,7 +2,7 @@
 
 `nsp-dawrin` is an experimental cross-platform compatibility runtime and Flutter desktop launcher. Shared host services and package preparation support macOS, Windows and Linux; the native ARM64 executor and Metal renderer currently target macOS 26+. Guest CPU instructions run natively after NSO rewriting. The vendored shader library translates GPU instructions offline; it is not a CPU emulator. Unicorn is used only in isolated instruction tests.
 
-Write code, comments, diagnostics and documentation in English. Keep the README focused on installation, usage and features. Put implementation caveats and agent guidance here or in technical docs. New project work uses GPL-3.0-or-later. Preserve upstream MIT notices and third-party licenses.
+Write code, comments, diagnostics and documentation in English. Keep the README focused on installation, usage and features. Keep the README Launch section GUI-first. Put source builds, script launch commands, smoke checks and CLI/OCR automation in [docs/development.md](docs/development.md). Put implementation caveats and agent guidance here or in technical docs. New project work uses GPL-3.0-or-later. Preserve upstream MIT notices and third-party licenses.
 
 Prioritize the native launcher for application packages and associated DLC.
 Standalone converted application export and installer generation are deferred.

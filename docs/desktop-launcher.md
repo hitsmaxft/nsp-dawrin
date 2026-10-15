@@ -35,7 +35,7 @@ signing only; there is no developer certificate or notarization step.
 
 The application is a development launcher that connects to a prepared runtime
 checkout. Runtime binaries, Python dependencies, .NET and shader tools are not
-bundled into the GUI artifact. Initial runtime building follows the main README;
+bundled into the GUI artifact. Initial runtime building follows the [developer guide](development.md#native-runtime-build-macos);
 after setup, ordinary library and session operations use the GUI. Automatic
 runtime installation and standalone installers remain separate future work.
 
