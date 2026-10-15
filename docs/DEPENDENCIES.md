@@ -166,3 +166,14 @@ positions and standard USB HID keyboard usages; no implementation is copied.
 
 Shared font availability follows libnx `services/pl.h`. The host adapter uses
 CoreText to locate an installed font and maps it read-only; no font is bundled.
+
+## Architecture reference: LASRecomp
+
+[LASRecomp](https://github.com/peiikai/LASRecomp/tree/03b19027df1731593903778073cad51dceb5f8dd),
+by Peiikai, is MIT-licensed. The review at revision
+`03b19027df1731593903778073cad51dceb5f8dd` covered `tools/gen.py`,
+`runtime/cpu.h`, `runtime/gamelib.h`, `runtime/gamelib.c`,
+`runtime/gamebuild.c`, `runtime/paths.h`, and `Makefile`. Its generated-code
+version contract, separate runtime/data ownership, and atomic executable
+publication informed our preparation and build workflow. This is a design
+reference; no LASRecomp implementation or game-specific data is vendored.

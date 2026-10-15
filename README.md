@@ -161,6 +161,8 @@ See [Crash reporting](docs/crash-reporting.md) for CLI options and report conten
 
 Thanks to [jhaizhou-ops/d2r-mobile](https://github.com/jhaizhou-ops/d2r-mobile) for publishing the implementation that forms the foundation of this project: ARM64 rewriting, host services, NVN command recording and Metal replay, and offline shader translation. Its explicit resource reflection and versioned caches also inform this macOS implementation.
 
+Thanks also to [Peiikai / LASRecomp](https://github.com/peiikai/LASRecomp) for the generated-code versioning and atomic build-publication design reference.
+
 This project builds on the work of many authors and maintainers. In particular, thank you to:
 
 - **Ryujinx / Ryubing contributors** for the MIT-licensed `Ryujinx.Graphics.Shader`, `Spv.Generator`, and `Ryujinx.Common` libraries used for Maxwell-to-SPIR-V translation.
