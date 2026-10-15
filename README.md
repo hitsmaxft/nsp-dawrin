@@ -115,13 +115,25 @@ Open **nsp-dawrin → Settings…** with **⌘,**. Use **View → Enter Full Scr
 - **Keyboard:** click one of the 24 binding buttons, then press a key. Bindings cover buttons, direction pad, and both sticks. Assigning an occupied key moves it to the selected action. Shift, Control, and Option keys are supported; Command shortcuts remain available for menus. Clear an individual binding or restore the defaults with Reset Keyboard.
 - **Controller:** switch the active device immediately, use automatic selection, or disable controller input with Keyboard only. The preferred model is remembered; with multiple identical devices, select the desired device again after restarting.
 
-Settings are saved to `~/Library/Application Support/nsp-dawrin/settings.json`. Keyboard and controller input are released when the game loses focus.
+Settings default to **This game** when an application is loaded. Each game keeps
+its own display, keyboard and controller overrides and inherits unchanged
+options from **Global defaults**. Select the scope at the top of Settings;
+**Reset Game Settings** restores inheritance for that game. System mode applies
+on the next launch; other settings apply immediately.
+
+Global settings are saved to `~/Library/Application Support/nsp-dawrin/settings.json`,
+with game profiles in the adjacent `profiles/` directory. Keyboard and controller
+input are released when the game loses focus. See [feature design](docs/feature-design.md)
+for the multi-game workflow and planned additions.
 
 The control API exposes the same settings for automation:
 
 ```sh
 python tools/control.py settings
 python tools/control.py settings show
+python tools/control.py settings "profile game"
+python tools/control.py settings "profile global"
+python tools/control.py settings "profile reset"
 python tools/control.py settings '{"resolution":1080,"fullscreen":true}'
 python tools/control.py settings '{"mode":"console"}'
 python tools/control.py controller none
@@ -161,7 +173,7 @@ See [Crash reporting](docs/crash-reporting.md) for CLI options and report conten
 
 Thanks to [jhaizhou-ops/d2r-mobile](https://github.com/jhaizhou-ops/d2r-mobile) for publishing the implementation that forms the foundation of this project: ARM64 rewriting, host services, NVN command recording and Metal replay, and offline shader translation. Its explicit resource reflection and versioned caches also inform this macOS implementation.
 
-Thanks also to [Peiikai / LASRecomp](https://github.com/peiikai/LASRecomp) for the generated-code versioning and atomic build-publication design reference.
+Thanks also to [Peiikai / LASRecomp](https://github.com/peiikai/LASRecomp) for its launcher/settings ideas and atomic build-publication design reference.
 
 This project builds on the work of many authors and maintainers. In particular, thank you to:
 

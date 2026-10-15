@@ -98,3 +98,10 @@ Keep CLI-injected input separate from held keyboard keys; recompute keyboard but
 `tests/settings.m` checks persistence across processes and virtual controller selection. `tests/settings_ui.m` exercises real AppKit menu actions, key capture, focus release, drawable resolution and fullscreen transitions. Run both with a fresh `NSP_SETTINGS_PATH` outside the checkout; this keeps the user's preferences unchanged. Full-screen tests need an unlocked foreground macOS session. `--skip-fullscreen` runs the independent menu/input/resolution checks while explicitly reporting that skip. Reuse `build/bin` for their small executables.
 
 Run `tools/service_catalog.py --check` before startup validation to detect binding conflicts. Use `tools/validate_matrix.py` to group failures by shared interface. See [runtime compatibility](docs/runtime-compatibility.md) for variant metadata, content loading and validation boundaries.
+
+Per-game settings use a validated `DM_TITLE_ID`, partial overrides, and the same
+validation/persistence path as global defaults. Keep editing scope distinct from
+the immutable active guest mode. `tests/settings_profiles.m` runs isolated child
+processes to check persistence and global inheritance; `tests/settings_ui.m`
+checks the native scope/reset actions and CLI API. Use the synthetic IDs in
+these tests, never actual package metadata in committed fixtures.

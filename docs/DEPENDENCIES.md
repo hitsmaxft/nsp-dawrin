@@ -177,3 +177,6 @@ by Peiikai, is MIT-licensed. The review at revision
 version contract, separate runtime/data ownership, and atomic executable
 publication informed our preparation and build workflow. This is a design
 reference; no LASRecomp implementation or game-specific data is vendored.
+Its single-title launcher/settings and separate playthrough data also informed
+the multi-game feature design in `docs/feature-design.md`; per-application
+settings inheritance is an independent implementation.
