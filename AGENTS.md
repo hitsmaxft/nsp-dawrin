@@ -116,3 +116,13 @@ Use `tests/fixture_app.py` for original synthetic NSP checks before commercial
 application bring-up. Keep generated packages and keys outside the checkout.
 Run `--native-host build/bin/nsp-dawrin --negative-control` for actual guest
 execution; package/rewrite success alone must not be reported as native execution.
+
+## Flutter desktop client
+
+Read `docs/desktop-launcher.md` for GUI/API boundaries. Keep UI state independent
+of transport through `LauncherApi`. Extend structured launcher methods rather
+than assembling shell commands in widgets. Reuse content, settings, shader and
+crash-report contracts. Never replace a failed launch with simulated success.
+Use `tools/build_gui.py --test --build` to keep generated files and Pub downloads
+under root `build/`. Platform runners derive from Flutter templates; preserve
+notices and regenerate only after reviewing local window/entitlement changes.

@@ -1,0 +1,45 @@
+name: Desktop GUI
+on:
+  push:
+    paths: ['gui/**', 'tools/launcher/**', 'tools/launcher_service.py', 'tools/build_gui.py', '.github/workflows/desktop-gui.yml']
+  pull_request:
+    paths: ['gui/**', 'tools/launcher/**', 'tools/launcher_service.py', 'tools/build_gui.py', '.github/workflows/desktop-gui.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-26, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev
+      - name: Install pinned Flutter SDK
+        shell: bash
+        run: |
+          git clone --depth 1 --branch 3.47.7 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - name: Install package pipeline dependencies
+        run: python -m pip install -r requirements-core.txt
+      - name: Analyze, test and build desktop client
+        run: python tools/build_gui.py --test --build
+      - name: Package macOS bundle with permissions
+        if: runner.os == 'macOS'
+        run: tar -czf build/nsp-dawrin-macos.tar.gz -C build/flutter/project/build/macos/Build/Products/Release nsp-dawrin.app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ runner.os }}
+          if-no-files-found: error
+          path: |
+            build/nsp-dawrin-macos.tar.gz
+            build/flutter/project/build/windows/x64/runner/Release/
+            build/flutter/project/build/linux/x64/release/bundle/
