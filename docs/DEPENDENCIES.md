@@ -198,3 +198,7 @@ are not vendored. CMake (Kitware, BSD 3-Clause, minimum 3.20; locally verified
 with 4.4.4) builds the portable service tests; see
 [cmake.org](https://cmake.org/) and its [license](https://cmake.org/licensing/).
 GitHub Actions uses `actions/checkout@v4` (GitHub, MIT) for the platform matrix.
+The fixture workflow also uses `actions/setup-python@v5` (GitHub, MIT) to select
+Python 3.12. Fixture encryption, NSO rewriting and decoding reuse the existing
+cryptography, Capstone and lz4 dependencies in `requirements-core.txt`; no vendor
+SDK or packager is used to generate the original fixture program.
