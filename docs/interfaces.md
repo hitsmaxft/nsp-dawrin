@@ -12,7 +12,7 @@ The contracts live in `tools/nsp_runtime/interfaces.py`. Modules receive resourc
 | Host shader generation | `ShaderBuildBackend.build` | `backends.MetalSourceBackend`; MSL plus resource binding manifests |
 | Native controller state | `NativePad`, `native_controller_read` | `src/macos/controller.h` and the system framework adapter |
 | Runtime shader metadata | `runtime_shader_facts`, `shader_jobs.prepare` | Bound resource observations and isolated first-use variants |
-| System services | `NativeServiceHandler`, `native_ipc_register` | HIPC/CMIF transport in `src/macos/ipc.h` |
+| System services | `NativeServiceHandler`, `native_ipc_register` | HIPC/CMIF transport in `src/compat/ipc.h` |
 | Content and storage | `native_content_*`, `native_save_*` | Read-only content inventory and persistent save allocation |
 
 A new engine normally adds only an `EngineAdapter`. Reuse an existing decoder when its GPU blob layout matches. A new package format implements `ResourceReader`, independently of engine parsing. A new GPU format implements `ShaderDecoder`. Unsupported formats, ambiguous detection, malformed extents and unsupported stages are reported; they are not counted as successful coverage.
@@ -88,3 +88,7 @@ python -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
 Use `build/venv` with `requirements.txt` installed. Tests use synthetic shader records, a synthetic engine adapter, bounded resource reads, invalid formats, ambiguous detection, metadata restrictions and cache invalidation. Native input harnesses remain separate: virtual framework input and mouse events do not establish physical controller behavior.
+
+Native system-service modules and platform contracts are documented in
+[backend architecture](backend-architecture.md). Guest ABI structures stay in
+`src/compat`; host APIs stay in `src/backend`.

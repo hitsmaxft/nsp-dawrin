@@ -21,7 +21,8 @@ Inspect processes and mounts before cleanup. A work directory can contain live n
 | --- | --- |
 | `tools/content.py`, `package.py` | NSP/XCI containers, CNMT selection, BKTR ranges, base/update/DLC resources |
 | `src/macos/package_fs.m`, `content.h`, `storage.*` | Native virtual resource reads, content inventory and persistent save allocation |
-| `src/macos/ipc.*`, `src/host/hle_ipc.c` | Bounded HIPC/CMIF transport and SDK-independent service registry |
+| `src/backend/`, `src/compat/clock.*` | Portable host operations and shared clock semantics |
+| `src/compat/ipc.*`, `src/host/hle_ipc.c` | Bounded HIPC/CMIF transport and SDK-independent service registry |
 | `tools/patch_nso.py` | x18/TLS virtualization, guest SVC/timer gates, branch rewriting |
 | `src/host/loader.c` | Module layout, relocation, symbol lookup and forced host imports |
 | `src/host/hle_*.c` | Guest service implementations and host bridges |
@@ -105,3 +106,8 @@ the immutable active guest mode. `tests/settings_profiles.m` runs isolated child
 processes to check persistence and global inheritance; `tests/settings_ui.m`
 checks the native scope/reset actions and CLI API. Use the synthetic IDs in
 these tests, never actual package metadata in committed fixtures.
+
+For service/backend work, read `docs/backend-architecture.md` and run the portable
+CMake/CTest target in `build/services`. Keep OS headers out of `src/compat`; keep
+guest ABI layouts out of `src/backend`. Do not confuse the portable service
+library with a complete Windows/Linux execution or graphics backend.

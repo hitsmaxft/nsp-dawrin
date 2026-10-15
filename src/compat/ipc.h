@@ -3,9 +3,15 @@
 #include <stdint.h>
 
 typedef struct {void *data;size_t size;} NativeIpcBuffer;
-typedef struct {unsigned char data[128];size_t size;} NativeIpcReply;
+typedef struct NativeIpcReply NativeIpcReply;
 typedef uint32_t (*NativeServiceHandler)(uint32_t command,const void *input,size_t size,
                                        NativeIpcBuffer output,NativeIpcReply *reply);
+struct NativeIpcReply {
+    unsigned char data[128];
+    size_t size;
+    /* Optional stateless child interface, published only on successful replies. */
+    NativeServiceHandler object;
+};
 /* Register before starting guest threads. Names contain at most eight bytes.
  * Handlers run under the transport lock and must not reenter the registry.
  * Output descriptors are guest pointers: use native_ipc_write for bounded writes. */

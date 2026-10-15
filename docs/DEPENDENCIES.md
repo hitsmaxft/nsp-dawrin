@@ -108,7 +108,7 @@ at `feebd026ca0f5dcc2119f46ad8e0d16ad3dd4973` (`nacp.h`, `sf/hipc.h`,
 `sf/cmif.h`, `services/sm.c`, `services/set.c`). CPU loading mode semantics also
 reference [apm.h](https://github.com/switchbrew/libnx/blob/feebd026ca0f5dcc2119f46ad8e0d16ad3dd4973/nx/include/switch/services/apm.h).
 The independent host transport
-in `src/macos/ipc.c` adapts these layouts to bounded local service dispatch;
+in `src/compat/ipc.c` adapts these layouts to bounded local service dispatch;
 libnx is not linked. Its complete ISC notice is retained in
 [LICENSES/libnx-ISC.txt](../LICENSES/libnx-ISC.txt).
 The controller-support result and argument header in `src/macos/input.c` also

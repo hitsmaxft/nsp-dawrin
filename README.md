@@ -6,6 +6,7 @@ A native launcher and ARM64 compatibility runtime for macOS. Guest CPU instructi
 - Prepare shaders through a modular Maxwell → SPIR-V → MSL pipeline.
 - Use mouse touch, keyboard, and system-supported game controllers.
 - Inspect runtime state and interact through a local CLI with OCR.
+- Build portable service backends for macOS, Windows and Linux; see [backend architecture](docs/backend-architecture.md).
 - Add engine adapters through [documented extension interfaces](docs/interfaces.md).
 
 ## Build

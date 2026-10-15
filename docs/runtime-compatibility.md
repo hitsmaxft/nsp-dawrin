@@ -55,14 +55,15 @@ second lists symbols, handlers, source modules and reasons for takeover. Add
 synthetic checks for common service behavior and preserve ABI-specific wrappers.
 This inventory is not a claim that all OS services or IPC commands exist.
 
-`src/macos/ipc.h` defines a transport-level service interface independent of SDK
+`src/compat/ipc.h` defines a transport-level service interface independent of SDK
 symbol names. Register a command handler with `native_ipc_register` before guest
 threads start. HIPC/CMIF requests support service resolution, session handles,
-single-object domains and one output descriptor. Handlers receive bounded input
+child sessions, multiple stateless domain objects and one output descriptor. Handlers receive bounded input
 and use `native_ipc_write` for output. Settings language commands use this path.
 Unknown services and commands return errors and stable diagnostic identifiers.
-Multiple domain objects, input buffer dispatch and asynchronous IPC need further
-implementation. Protocol-session closure and kernel-handle closure are separate.
+Input buffer dispatch, stateful service instances and asynchronous IPC need further
+implementation. See the [API review](compatibility-api-review.md) for command coverage
+and [backend architecture](backend-architecture.md) for platform boundaries. Protocol-session closure and kernel-handle closure are separate.
 `native_power_boost` maps loading hints to a reversible macOS activity token;
 clock frequencies remain managed by the host OS.
 

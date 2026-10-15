@@ -1,0 +1,21 @@
+name: Host services
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  services:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure portable services
+        run: cmake -S . -B build/services -DBUILD_TESTING=ON
+      - name: Build
+        run: cmake --build build/services --config Debug --parallel 2
+      - name: Test synthetic service contracts
+        run: ctest --test-dir build/services -C Debug --output-on-failure

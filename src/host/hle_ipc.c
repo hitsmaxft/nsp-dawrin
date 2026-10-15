@@ -1,6 +1,6 @@
 // System-call transport shares one service registry across guest SDK versions.
 #include "dm.h"
-#include "../macos/ipc.h"
+#include "../compat/ipc.h"
 
 int svc_ipc(int number,uint64_t *registers) {
     if(number==0x1f){

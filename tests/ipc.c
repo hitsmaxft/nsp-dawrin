@@ -36,6 +36,7 @@ int main(void) {
     b[8]=0x49434653;b[10]=5;
     assert(!native_ipc_transact(settings,b,sizeof b));assert(b[6]==0 && b[8]==3);
     assert(!memcmp(languages,"ja",2) && !memcmp(languages+1,"en-US",5));
+    assert(native_ipc_transact(settings,(void *)1,sizeof b)!=0);
     request(b,5,2,0);assert(!native_ipc_transact(settings,b,sizeof b));
     uint32_t clone=b[3];assert(clone!=settings && native_ipc_owns(clone));
     assert(!native_ipc_close(settings));
