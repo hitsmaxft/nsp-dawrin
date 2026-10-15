@@ -202,3 +202,38 @@ The fixture workflow also uses `actions/setup-python@v5` (GitHub, MIT) to select
 Python 3.12. Fixture encryption, NSO rewriting and decoding reuse the existing
 cryptography, Capstone and lz4 dependencies in `requirements-core.txt`; no vendor
 SDK or packager is used to generate the original fixture program.
+
+## Flutter desktop client
+
+The desktop client uses Flutter 3.47.7 (The Flutter Authors, BSD 3-Clause),
+revision `abaf9c523780a608bd46686fd5e53740a07077f8`, and its Dart 3.13.5 SDK
+(The Dart project authors, BSD 3-Clause). Sources:
+[Flutter](https://github.com/flutter/flutter/tree/3.47.7) and
+[Dart](https://github.com/dart-lang/sdk). The macOS, Windows and Linux runner
+sources under `gui/` were generated from Flutter templates and adapted for this
+project's name, icon, window size and unsandboxed local process bridge. The GUI
+layout, original geometric icon, library API and session management are local
+work. Full notices are in `LICENSES/Flutter-BSD.txt` and `LICENSES/Dart-BSD.txt`.
+
+Direct packages, resolved in `gui/pubspec.lock`:
+
+| Package | Author/source | Version | Purpose | License |
+| --- | --- | --- | --- | --- |
+| file_selector | [Flutter Authors](https://github.com/flutter/packages/tree/main/packages/file_selector) | 1.1.0 | Native file and directory dialogs | BSD 3-Clause |
+| path | [Dart project authors](https://github.com/dart-lang/core/tree/main/pkgs/path) | 1.9.1 | Portable path handling | BSD 3-Clause |
+| flutter_lints | [Flutter Authors](https://github.com/flutter/packages/tree/main/packages/flutter_lints) | 6.0.0 | Development analysis rules | BSD 3-Clause |
+
+These packages are used without local modifications. The file selector's
+platform implementations and interfaces, cross_file, plugin_platform_interface,
+and Dart core utility packages are transitive dependencies recorded in the lock
+file. Flutter emits their registered package licenses and engine notices into
+the application; **About & acknowledgments** opens the runtime license registry.
+The build helper also includes the project GPL license and preserved notices.
+Material icon glyphs come from Flutter's bundled Material Icons font (Google,
+Apache-2.0); its notice is included in Flutter's generated license bundle. No
+external cover art or font files are bundled by this project.
+
+Desktop CI uses `actions/upload-artifact@v4` (GitHub, MIT;
+[repository](https://github.com/actions/upload-artifact)) to publish build
+artifacts. Flutter is fetched from its official repository at the pinned tag;
+no third-party Flutter setup action is used.

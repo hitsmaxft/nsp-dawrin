@@ -192,6 +192,7 @@ This project builds on the work of many authors and maintainers. In particular, 
 - **libnx authors and contributors** for [libnx](https://github.com/switchbrew/libnx), used as a reference for content metadata and host service protocols.
 - **Android Open Source Project contributors** for the public media codec interfaces used by the host's software codec selection policy.
 - **Khronos Group and SPIRV-Cross contributors** for the SPIR-V definitions and [SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross) translation to Metal Shading Language.
+- **Flutter and Dart authors**, and the maintainers of **file_selector** and **path**, for the desktop UI, native file dialogs and portable tooling.
 - **UnityPy, cryptography, python-lz4, Capstone, Unicorn, Tesseract, Python, .NET, and LLVM contributors**, and the maintainers of their dependencies, for asset inspection, package reading, instruction verification, OCR, and the build tools.
 
 See [Dependencies](docs/DEPENDENCIES.md) for component versions, authors, uses, and licenses, and [UPSTREAM.md](UPSTREAM.md) for source provenance.
