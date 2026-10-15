@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import struct
+from host_io import PositionalReader
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 
@@ -79,8 +80,8 @@ class KeyStore:
 class Container:
     def __init__(self, path):
         self.path = Path(path).resolve()
-        self.fd = os.open(self.path, os.O_RDONLY)
-        self.size = os.fstat(self.fd).st_size
+        self.reader = PositionalReader(self.path)
+        self.size = self.reader.size
         try:
             if self.read(0, 4) == b'PFS0':
                 self.entries = archive(self.read, 0, self.size)
@@ -109,10 +110,10 @@ class Container:
 
     def read(self, offset, size):
         bounds(offset, size, self.size)
-        return read_exact(lambda o,n: os.pread(self.fd,n,o), offset, size)
+        return read_exact(self.reader.read_at, offset, size)
 
     def close(self):
-        if self.fd >= 0: os.close(self.fd); self.fd = -1
+        self.reader.close()
 
 
 @dataclass(frozen=True)

@@ -68,3 +68,8 @@ This target compiles only portable services and synthetic tests. It does not nee
 packages, firmware, a graphics device, .NET or platform-vendor keys. The existing
 `make -j4` target builds the complete macOS runner with the same service modules.
 The `Host services` CI workflow runs the portable contracts on all three OSes.
+
+The Python package pipeline uses `tools/host_io.py` for owned binary positional
+reads. POSIX uses `pread`; Windows uses a per-file locked seek/read fallback.
+Package parsers retain format bounds and truncation checks. Binary mode preserves
+byte offsets and control bytes. The I/O contract has concurrent-read tests.
