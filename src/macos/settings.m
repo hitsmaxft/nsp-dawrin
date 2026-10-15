@@ -6,6 +6,10 @@ NSString *const NativeSettingsChanged = @"NativeSettingsChanged";
 static NSDictionary *settings;
 static NSURL *settings_url;
 static int active_handheld;
+static NSDictionary *global_settings, *game_overrides;
+static NSURL *profile_url;
+static NSString *application_id;
+static BOOL game_scope;
 
 NSArray<NSString *> *native_binding_names(void) {
     return @[@"A", @"B", @"X", @"Y", @"Left stick click", @"Right stick click",
@@ -51,6 +55,25 @@ static BOOL valid(NSDictionary *data) {
     }
     return YES;
 }
+static NSDictionary *merged(NSDictionary *base, NSDictionary *patch) {
+    NSMutableDictionary *data=[base mutableCopy];
+    [data addEntriesFromDictionary:patch];return [data copy];
+}
+static BOOL settings_error(NSError **error, NSString *message) {
+    if (error) *error=[NSError errorWithDomain:@"nsp-dawrin.settings" code:1
+        userInfo:@{NSLocalizedDescriptionKey:message}];
+    return NO;
+}
+static BOOL write_settings(NSURL *url, NSDictionary *value, NSError **error) {
+    NSURL *parent=url.URLByDeletingLastPathComponent;
+    if (![NSFileManager.defaultManager createDirectoryAtURL:parent withIntermediateDirectories:YES attributes:nil error:error]) return NO;
+    NSData *data=[NSJSONSerialization dataWithJSONObject:value options:NSJSONWritingPrettyPrinted error:error];
+    return data && [data writeToURL:url options:NSDataWritingAtomic error:error];
+}
+static void refresh_settings(void) {
+    settings=game_scope ? merged(global_settings,game_overrides) : global_settings;
+    [NSNotificationCenter.defaultCenter postNotificationName:NativeSettingsChanged object:nil];
+}
 void native_settings_init(void) {
     if (settings) return;
     const char *override=getenv("NSP_SETTINGS_PATH");
@@ -59,8 +82,25 @@ void native_settings_init(void) {
             URLByAppendingPathComponent:@"nsp-dawrin/settings.json"];
     NSData *data=[NSData dataWithContentsOfURL:settings_url];
     id saved=data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:nil] : nil;
-    settings=valid(saved) ? [saved copy] : defaults();
+    global_settings=valid(saved) ? [saved copy] : defaults();
     if (data && !valid(saved)) NSLog(@"Invalid settings; using defaults until new settings are saved");
+    NSString *identity=getenv("DM_TITLE_ID") ? @(getenv("DM_TITLE_ID")) : @"";
+    NSCharacterSet *hex=[NSCharacterSet characterSetWithCharactersInString:@"0123456789abcdefABCDEF"];
+    if (identity.length==16 && [identity rangeOfCharacterFromSet:hex.invertedSet].location==NSNotFound) {
+        application_id=identity.lowercaseString;
+        NSURL *directory=override ? [NSURL fileURLWithPath:[@(override) stringByAppendingString:@".profiles"]] :
+            [settings_url.URLByDeletingLastPathComponent URLByAppendingPathComponent:@"profiles"];
+        profile_url=[directory URLByAppendingPathComponent:[application_id stringByAppendingString:@".json"]];
+    }
+    game_overrides=@{};
+    NSData *profile=profile_url ? [NSData dataWithContentsOfURL:profile_url] : nil;
+    id record=profile ? [NSJSONSerialization JSONObjectWithData:profile options:0 error:nil] : nil;
+    if ([record isKindOfClass:NSDictionary.class] && [record[@"schema_version"] isEqual:@1] &&
+        [record[@"overrides"] isKindOfClass:NSDictionary.class] && valid(merged(global_settings,record[@"overrides"])))
+        game_overrides=[record[@"overrides"] copy];
+    else if (profile) NSLog(@"Invalid game settings; inheriting global defaults until new settings are saved");
+    game_scope=application_id!=nil;
+    settings=game_scope ? merged(global_settings,game_overrides) : global_settings;
     const char *mode=getenv("DM_HANDHELD");
     active_handheld=mode ? atoi(mode)!=0 : [settings[@"mode"] isEqual:@"handheld"];
 }
@@ -68,19 +108,43 @@ int native_settings_handheld(void) { return active_handheld; }
 NSDictionary *native_settings_snapshot(void) { native_settings_init(); return settings; }
 BOOL native_settings_update(NSDictionary *patch, NSError **error) {
     native_settings_init();
-    NSMutableDictionary *next=[settings mutableCopy];
-    if (![patch isKindOfClass:NSDictionary.class]) return NO;
-    [next addEntriesFromDictionary:patch];
-    if (!valid(next)) {
-        if (error) *error=[NSError errorWithDomain:@"nsp-dawrin.settings" code:1 userInfo:@{NSLocalizedDescriptionKey:@"Invalid settings or duplicate key binding"}];
-        return NO;
+    if (![patch isKindOfClass:NSDictionary.class]) return settings_error(error,@"Expected a settings object");
+    NSDictionary *next=merged(settings,patch);
+    if (!valid(next)) return settings_error(error,@"Invalid settings or duplicate key binding");
+    if (game_scope) {
+        NSMutableDictionary *overrides=[game_overrides mutableCopy];
+        for (NSString *key in patch) {
+            if ([next[key] isEqual:global_settings[key]]) [overrides removeObjectForKey:key];
+            else overrides[key]=next[key];
+        }
+        if (!write_settings(profile_url,@{@"schema_version":@1,@"overrides":overrides},error)) return NO;
+        game_overrides=[NSJSONSerialization JSONObjectWithData:[NSJSONSerialization dataWithJSONObject:overrides options:0 error:nil] options:0 error:nil];
+    } else {
+        if (!write_settings(settings_url,next,error)) return NO;
+        global_settings=[NSJSONSerialization JSONObjectWithData:[NSJSONSerialization dataWithJSONObject:next options:0 error:nil] options:0 error:nil];
     }
-    NSURL *parent=[settings_url URLByDeletingLastPathComponent];
-    if (![NSFileManager.defaultManager createDirectoryAtURL:parent withIntermediateDirectories:YES attributes:nil error:error]) return NO;
-    NSData *data=[NSJSONSerialization dataWithJSONObject:next options:NSJSONWritingPrettyPrinted error:error];
-    if (!data || ![data writeToURL:settings_url options:NSDataWritingAtomic error:error]) return NO;
-    settings=[NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
-    [NSNotificationCenter.defaultCenter postNotificationName:NativeSettingsChanged object:nil];
+    refresh_settings();
+    return YES;
+}
+NSDictionary *native_settings_profile(void) {
+    native_settings_init();
+    return @{@"scope":game_scope ? @"game":@"global", @"application_id":application_id ?: @"",
+             @"override_keys":[game_overrides.allKeys sortedArrayUsingSelector:@selector(compare:)]};
+}
+BOOL native_settings_select_scope(NSString *scope, NSError **error) {
+    native_settings_init();
+    if (![@[@"game",@"global"] containsObject:scope]) return settings_error(error,@"Unknown settings scope");
+    if ([scope isEqual:@"game"] && !application_id) return settings_error(error,@"No application is selected");
+    game_scope=[scope isEqual:@"game"];
+    refresh_settings();
+    return YES;
+}
+BOOL native_settings_reset_game(NSError **error) {
+    native_settings_init();
+    if (!application_id || !game_scope) return settings_error(error,@"Select this game's settings before resetting them");
+    if (!write_settings(profile_url,@{@"schema_version":@1,@"overrides":@{}},error)) return NO;
+    game_overrides=@{};
+    refresh_settings();
     return YES;
 }
 uint64_t native_settings_key_mask(unsigned short key) {

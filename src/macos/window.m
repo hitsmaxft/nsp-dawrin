@@ -211,11 +211,14 @@ char *native_front_settings(const char *command) {
         NSError *error=nil;BOOL ok=YES;
         if ([request isEqual:@"show"]) [game_delegate showSettings:nil];
         else if ([request hasPrefix:@"controller "]) ok=native_controller_choose([request substringFromIndex:11],&error);
+        else if ([request isEqual:@"profile reset"]) ok=native_settings_reset_game(&error);
+        else if ([request hasPrefix:@"profile "]) ok=native_settings_select_scope([request substringFromIndex:8],&error);
         else if (request.length) {
             id patch=[NSJSONSerialization JSONObjectWithData:[request dataUsingEncoding:NSUTF8StringEncoding] options:0 error:&error];
             ok=patch && native_settings_update(patch,&error);
         }
         NSMutableDictionary *response=[native_settings_snapshot() mutableCopy];
+        response[@"profile"]=native_settings_profile();
         response[@"active_mode"]=native_settings_handheld() ? @"handheld":@"console";
         response[@"actual_fullscreen"]=@((game_window.styleMask & NSWindowStyleMaskFullScreen)!=0);
         response[@"output_size"]=@[@(game_layer.drawableSize.width),@(game_layer.drawableSize.height)];

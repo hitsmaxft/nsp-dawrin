@@ -8,6 +8,8 @@
 @property NSPopUpButton *controller;
 @property NSButton *fullscreen;
 @property NSTextField *status;
+@property NSPopUpButton *scope;
+@property NSButton *resetGame;
 @property NSMutableArray<NSButton *> *bindingButtons;
 @property NSInteger recording;
 @property id keyMonitor;
@@ -23,12 +25,18 @@ static NSPopUpButton *popup(NSView *view, NSRect frame, NSArray *items, id targe
 }
 @implementation SettingsController
 - (instancetype)init {
-    NSWindow *window=[[NSWindow alloc] initWithContentRect:NSMakeRect(0,0,720,650)
+    NSWindow *window=[[NSWindow alloc] initWithContentRect:NSMakeRect(0,0,720,720)
         styleMask:NSWindowStyleMaskTitled|NSWindowStyleMaskClosable backing:NSBackingStoreBuffered defer:NO];
     if (!(self=[super initWithWindow:window])) return nil;
     self.recording=-1;window.title=@"Settings";window.delegate=self;window.releasedWhenClosed=NO;
     window.collectionBehavior=NSWindowCollectionBehaviorFullScreenAuxiliary|NSWindowCollectionBehaviorMoveToActiveSpace;
     NSView *view=window.contentView;
+    [view addSubview:label(@"Settings for",NSMakeRect(24,677,140,24))];
+    self.scope=popup(view,NSMakeRect(170,674,280,28),@[],self,@selector(changeScope:));
+    self.scope.accessibilityLabel=@"Settings scope";
+    self.resetGame=[NSButton buttonWithTitle:@"Reset Game Settings" target:self action:@selector(resetGameSettings:)];
+    self.resetGame.frame=NSMakeRect(470,674,220,28);[view addSubview:self.resetGame];
+    [view addSubview:label(@"Unchanged game options inherit global defaults.",NSMakeRect(170,648,510,20))];
     [view addSubview:label(@"Display",NSMakeRect(24,610,200,24))];
     self.fullscreen=[NSButton checkboxWithTitle:@"Full screen" target:self action:@selector(changeFullscreen:)];
     self.fullscreen.frame=NSMakeRect(430,610,250,24);[view addSubview:self.fullscreen];
@@ -82,6 +90,15 @@ static NSPopUpButton *popup(NSView *view, NSRect frame, NSArray *items, id targe
 }
 - (void)refresh {
     NSDictionary *data=native_settings_snapshot();
+    NSDictionary *profile=native_settings_profile();
+    [self.scope removeAllItems];
+    [self.scope addItemWithTitle:@"Global defaults"];self.scope.lastItem.representedObject=@"global";
+    if ([profile[@"application_id"] length]) {
+        [self.scope addItemWithTitle:[@"This game — " stringByAppendingString:profile[@"application_id"]]];
+        self.scope.lastItem.representedObject=@"game";
+    }
+    [self.scope selectItemAtIndex:[profile[@"scope"] isEqual:@"game"]];
+    self.resetGame.enabled=[profile[@"scope"] isEqual:@"game"] && [profile[@"override_keys"] count]>0;
     [self.mode selectItemAtIndex:[data[@"mode"] isEqual:@"console"]];
     [self.resolution selectItemAtIndex:[@[@0,@720,@1080] indexOfObject:data[@"resolution"]]];
     self.fullscreen.state=[data[@"fullscreen"] boolValue];
@@ -102,6 +119,18 @@ static NSPopUpButton *popup(NSView *view, NSRect frame, NSArray *items, id targe
         for (NSNumber *key in data[@"bindings"][[NSString stringWithFormat:@"%ld",(long)i]]) [keys addObject:native_key_label(key.unsignedShortValue)];
         self.bindingButtons[i].title=i==self.recording ? @"Press a key…" : (keys.count ? [keys componentsJoinedByString:@" / "] : @"Unbound");
     }
+}
+- (void)changeScope:(id)sender {
+    self.recording=-1;NSError *error=nil;
+    if (!native_settings_select_scope(self.scope.selectedItem.representedObject,&error)) self.status.stringValue=error.localizedDescription;
+    else self.status.stringValue=@"Selected settings applied; system mode changes take effect on the next launch";
+    [self refresh];
+}
+- (void)resetGameSettings:(id)sender {
+    self.recording=-1;NSError *error=nil;
+    if (!native_settings_reset_game(&error)) self.status.stringValue=error.localizedDescription;
+    else self.status.stringValue=@"This game now inherits global defaults";
+    [self refresh];
 }
 - (void)changeMode:(id)sender { [self save:@{@"mode":self.mode.indexOfSelectedItem ? @"console":@"handheld"}]; }
 - (void)changeResolution:(id)sender { [self save:@{@"resolution":@[@0,@720,@1080][self.resolution.indexOfSelectedItem]}]; }

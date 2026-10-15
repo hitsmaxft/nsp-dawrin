@@ -31,6 +31,7 @@ static NSButton *button(NSWindow *window,NSString *title) {
 int main(int argc, char **argv) {
     @autoreleasepool {
         alarm(getenv("NSP_TEST_WAIT_ACTIVE") ? 90 : 20);
+        setenv("DM_TITLE_ID","0123456789abcdef",1);
         setenv("DM_WINDOW","1",1);assert(native_front_init());[NSApp finishLaunching];pump(0.5);
         if (getenv("NSP_TEST_WAIT_ACTIVE")) {
             NSDate *limit=[NSDate dateWithTimeIntervalSinceNow:60];
@@ -94,7 +95,33 @@ int main(int argc, char **argv) {
         NSDictionary *state=[NSJSONSerialization JSONObjectWithData:[@(json) dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil];free(json);
         assert(([state[@"output_size"] isEqual:@[@1920,@1080]]));
         assert([state[@"active_mode"] isEqual:@"handheld"]);
+        assert([state[@"profile"][@"scope"] isEqual:@"game"]);
+        json=native_front_settings("profile global");free(json);
+        assert([native_settings_snapshot()[@"resolution"] intValue]==0);
+        json=native_front_settings("{\"resolution\":720}");free(json);
+        json=native_front_settings("profile game");free(json);
+        assert([native_settings_snapshot()[@"resolution"] intValue]==1080);
+        [NSApp.mainMenu.itemArray[0].submenu performActionForItemAtIndex:0];pump(0.2);
+        NSPopUpButton *scope=nil;
+        for (NSView *candidate in settings.contentView.subviews)
+            if ([candidate isKindOfClass:NSPopUpButton.class] && [candidate.accessibilityLabel isEqual:@"Settings scope"])
+                scope=(NSPopUpButton *)candidate;
+        assert(scope && scope.numberOfItems==2);
+        [view keyDown:key(game,6,NSEventTypeKeyDown)];assert(native_keyboard_buttons==1);
+        [scope selectItemAtIndex:0];[NSApp sendAction:scope.action to:scope.target from:scope];
+        assert(!native_keyboard_buttons && [native_settings_profile()[@"scope"] isEqual:@"global"]);
+        [scope selectItemAtIndex:1];[NSApp sendAction:scope.action to:scope.target from:scope];
+        assert([native_settings_profile()[@"scope"] isEqual:@"game"]);
+        [button(settings,@"Reset Game Settings") performClick:nil];
+        assert(![native_settings_profile()[@"override_keys"] count]);
+        assert(layer.drawableSize.width==1280 && layer.drawableSize.height==720);
+        if (capture) {
+            bitmap=[settings.contentView bitmapImageRepForCachingDisplayInRect:settings.contentView.bounds];
+            [settings.contentView cacheDisplayInRect:settings.contentView.bounds toBitmapImageRep:bitmap];
+            [[bitmap representationUsingType:NSBitmapImageFileTypePNG properties:@{}] writeToFile:@(capture) atomically:YES];
+        }
+        [settings close];
         [game orderOut:nil];
-        puts("PASS: menus, settings key capture and reassignment, aliases, focus release, resolution and API state");
+        puts("PASS: menus, key capture, aliases, focus release, resolution, profile scope/reset and API state");
     }
 }
