@@ -1,6 +1,8 @@
 # nsp-dawrin
 
-A native launcher and ARM64 compatibility runtime for macOS. Guest CPU instructions execute directly after rewriting, with local host services and an NVN-to-Metal graphics backend.
+A cross-platform compatibility runtime and Flutter desktop launcher for NSP/XCI. Modular host backends and package tooling support macOS, Windows and Linux, with native ARM64 execution and Metal graphics on macOS.
+
+![Desktop library with the original NSP test application](docs/screenshots/library.png)
 
 - Manage a desktop library with a Flutter GUI: import packages, select updates/DLC, play and configure controls.
 - Launch NSP/XCI content with resources read directly from the package.
@@ -10,7 +12,34 @@ A native launcher and ARM64 compatibility runtime for macOS. Guest CPU instructi
 - Build portable service backends for macOS, Windows and Linux; see [backend architecture](docs/backend-architecture.md).
 - Add engine adapters through [documented extension interfaces](docs/interfaces.md).
 
-## Build
+## Desktop GUI
+
+Build the Flutter desktop app with `python tools/build_gui.py --test --build`,
+or download a platform artifact from [Desktop GUI builds](https://github.com/hitsmaxft/nsp-dawrin/actions/workflows/desktop-gui.yml).
+Open the app, select the runtime folder and local key file in **Settings**, then
+use **Add package** and **Play**. Updates, DLC, fullscreen, display mode, keyboard
+bindings and controller selection are available in the interface.
+
+| Capability | macOS | Windows | Linux |
+| --- | --- | --- | --- |
+| Desktop GUI, library and package/update/DLC preparation | Yes | Yes | Yes |
+| Portable runtime services | Yes | Yes | Yes |
+| Native guest execution and graphics | ARM64 / Metal | Planned | Planned |
+
+See [desktop setup](docs/desktop-launcher.md) and [backend architecture](docs/backend-architecture.md).
+
+<details>
+<summary>Updates, DLC and controls</summary>
+
+![Update and DLC selection for the original test application](docs/screenshots/content.png)
+
+![Display and input preferences](docs/screenshots/controls.png)
+
+</details>
+
+Application-only captures use the [original NSP fixture](docs/ci-fixture.md).
+
+## Native runtime build (macOS)
 
 Requires an ARM64 Mac with macOS 26 or later, Command Line Tools, Python, .NET 10, and `spirv-cross`.
 
@@ -28,18 +57,6 @@ Build outputs stay under the ignored `build/` directory: `bin/` for native tools
 `obj/` for native objects, `dotnet/` for the translator, `venv/` for Python, and
 `nsp-dawrin.app` for the development app. Run `make clean` to remove compiled
 outputs while keeping the Python environment, or remove `build/` for a full reset.
-
-## Desktop GUI
-
-Build the Flutter desktop app with `python tools/build_gui.py --test --build`,
-or download a platform artifact from [Desktop GUI builds](https://github.com/hitsmaxft/nsp-dawrin/actions/workflows/desktop-gui.yml).
-Open the app, select the runtime folder and local key file in **Settings**, then
-use **Add package** and **Play**. Updates, DLC, fullscreen, display mode, keyboard
-bindings and controller selection are available in the interface.
-
-The GUI runs on macOS, Windows and Linux and connects to the local runtime;
-game execution currently uses the macOS ARM64 backend.
-See [desktop setup and architecture](docs/desktop-launcher.md).
 
 ## Launch
 

@@ -1,6 +1,6 @@
 # Project orientation
 
-`nsp-dawrin` is an experimental native ARM64 compatibility runtime for macOS 26+. Guest CPU instructions run natively after NSO rewriting. The vendored shader library translates GPU instructions offline; it is not a CPU emulator. Unicorn is used only in isolated instruction tests.
+`nsp-dawrin` is an experimental cross-platform compatibility runtime and Flutter desktop launcher. Shared host services and package preparation support macOS, Windows and Linux; the native ARM64 executor and Metal renderer currently target macOS 26+. Guest CPU instructions run natively after NSO rewriting. The vendored shader library translates GPU instructions offline; it is not a CPU emulator. Unicorn is used only in isolated instruction tests.
 
 Write code, comments, diagnostics and documentation in English. Keep the README focused on installation, usage and features. Put implementation caveats and agent guidance here or in technical docs. New project work uses GPL-3.0-or-later. Preserve upstream MIT notices and third-party licenses.
 
@@ -11,7 +11,7 @@ the roadmap; use docs/content-loading.md and docs/runtime-compatibility.md for c
 
 ## Ownership and data
 
-Keep source branding neutral; preserve required ABI symbol spellings and attribution. Never commit packages, assets, firmware, keys, saves, screenshots or captured shaders. Runtime data belongs outside the checkout. Treat package paths and local key locations as private. Do not print secret values. Preserve saves and the user's original packages during debugging.
+Keep source branding neutral; preserve required ABI symbol spellings and attribution. Never commit packages, game assets, firmware, keys, saves or captured shaders. Runtime screenshots remain private. User-authorized documentation captures under `docs/screenshots/` may show only this project's application UI and original test fixtures; exclude personal desktop content, local paths and real application assets. Runtime data belongs outside the checkout. Treat package paths and local key locations as private. Do not print secret values. Preserve saves and the user's original packages during debugging.
 
 Inspect processes and mounts before cleanup. A work directory can contain live network mounts: never recursively delete its parent. Use the ignored project-root `build/` directory for build artifacts: `build/obj`, `build/bin`, `build/venv`, and `build/dotnet`. Retain the built translator needed by the runtime. Clean only identified inactive generated artifacts, not entire workspaces or shared caches.
 
