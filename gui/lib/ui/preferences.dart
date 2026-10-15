@@ -118,7 +118,7 @@ class _PreferencesDialogState extends State<PreferencesDialog> {
               ),
               const SizedBox(height: 22),
               const Text(
-                'System mode',
+                'System mode · next launch',
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 10),
@@ -138,11 +138,6 @@ class _PreferencesDialogState extends State<PreferencesDialog> {
                 selected: {value['mode'] as String},
                 onSelectionChanged: (v) =>
                     setState(() => value['mode'] = v.first),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'System mode changes apply on the next launch.',
-                style: TextStyle(color: muted, fontSize: 11),
               ),
               const SizedBox(height: 22),
               DropdownButtonFormField<int>(
@@ -172,10 +167,7 @@ class _PreferencesDialogState extends State<PreferencesDialog> {
                   labelText: 'Input preference',
                 ),
                 items: const [
-                  DropdownMenuItem(
-                    value: 'auto',
-                    child: Text('Automatic controller selection'),
-                  ),
+                  DropdownMenuItem(value: 'auto', child: Text('Automatic')),
                   DropdownMenuItem(
                     value: 'none',
                     child: Text('Keyboard & mouse only'),
@@ -189,11 +181,6 @@ class _PreferencesDialogState extends State<PreferencesDialog> {
               const Text(
                 'Keyboard bindings',
                 style: TextStyle(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Click an action, then press a key. Each key can belong to one action.',
-                style: TextStyle(color: muted, fontSize: 12),
               ),
               const SizedBox(height: 14),
               for (var i = 0; i < actionNames.length; i++)
@@ -281,7 +268,7 @@ class _PreferencesDialogState extends State<PreferencesDialog> {
                     });
                   }
                 },
-          child: Text(saving ? 'Saving…' : 'Save preferences'),
+          child: Text(saving ? 'Saving…' : 'Save'),
         ),
       ],
     ),

@@ -297,18 +297,6 @@ class _LauncherShellState extends State<LauncherShell> {
           ],
         ),
         const SizedBox(height: 50),
-        if (wide)
-          const Padding(
-            padding: EdgeInsets.only(left: 12, bottom: 16),
-            child: Text(
-              'WORKSPACE',
-              style: TextStyle(
-                color: Color(0xff83968a),
-                fontSize: 10,
-                letterSpacing: 2,
-              ),
-            ),
-          ),
         for (final item in [
           (0, Icons.grid_view_rounded, 'Library'),
           (1, Icons.play_circle_outline, 'Session'),
@@ -364,31 +352,6 @@ class _LauncherShellState extends State<LauncherShell> {
             ),
           ),
         const Spacer(),
-        if (wide)
-          Container(
-            padding: const EdgeInsets.all(15),
-            decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xff3a4c40)),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.desktop_windows_outlined, color: accent, size: 19),
-                SizedBox(height: 12),
-                Text(
-                  'Your library.\nYour own space.',
-                  style: TextStyle(color: Colors.white, height: 1.5),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Built for the desktop',
-                  style: TextStyle(color: Color(0xff9cafa3), fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-        const SizedBox(height: 18),
         TextButton(
           onPressed: () => showLicensePage(
             context: context,
@@ -397,7 +360,7 @@ class _LauncherShellState extends State<LauncherShell> {
           ),
           child: wide
               ? const Text(
-                  'About & acknowledgments',
+                  'About',
                   style: TextStyle(color: Color(0xff9cafa3), fontSize: 10),
                 )
               : const Icon(Icons.info_outline, color: muted),
@@ -424,8 +387,8 @@ class _LauncherShellState extends State<LauncherShell> {
         Expanded(
           child: Text(
             c.connected
-                ? (c.session['message'] as String? ?? 'Connected')
-                : 'Connect a runtime to get started',
+                ? (c.session['state'] as String? ?? 'Connected')
+                : 'Disconnected',
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: muted, fontSize: 11),
           ),
@@ -475,15 +438,13 @@ class _LauncherShellState extends State<LauncherShell> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          eyebrow('MAKE TIME FOR PLAY'),
-                          const SizedBox(height: 8),
                           Text(
-                            'Your library',
+                            'Library',
                             style: Theme.of(context).textTheme.headlineLarge,
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            '${c.library.length} ${c.library.length == 1 ? 'application' : 'applications'} · Everything in one place',
+                            '${c.library.length} ${c.library.length == 1 ? 'application' : 'applications'}',
                             style: const TextStyle(color: muted),
                           ),
                         ],
@@ -498,8 +459,6 @@ class _LauncherShellState extends State<LauncherShell> {
                   ],
                 ),
                 const SizedBox(height: 26),
-                hero(),
-                const SizedBox(height: 28),
                 Row(
                   children: [
                     Expanded(
@@ -507,7 +466,7 @@ class _LauncherShellState extends State<LauncherShell> {
                         key: const Key('library-search'),
                         onChanged: (value) => setState(() => search = value),
                         decoration: const InputDecoration(
-                          hintText: 'Find something to play',
+                          hintText: 'Search library',
                           prefixIcon: Icon(Icons.search, size: 20),
                         ),
                       ),
@@ -580,67 +539,6 @@ class _LauncherShellState extends State<LauncherShell> {
     );
   }
 
-  Widget hero() => Container(
-    height: 188,
-    clipBehavior: Clip.antiAlias,
-    decoration: BoxDecoration(
-      color: ink,
-      borderRadius: BorderRadius.circular(22),
-    ),
-    child: Stack(
-      children: [
-        Positioned(
-          right: -60,
-          top: -85,
-          child: Transform.rotate(
-            angle: -.4,
-            child: SizedBox(
-              width: 360,
-              height: 360,
-              child: CustomPaint(painter: OrbitPainter()),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                'LESS SETUP. MORE PLAY.',
-                style: TextStyle(
-                  color: accent,
-                  fontSize: 10,
-                  letterSpacing: 2,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 13),
-              const Text(
-                'Pick a world.\nMake it yours.',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  height: 1.13,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: -.8,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                c.library.isEmpty
-                    ? 'Add your first package to begin.'
-                    : 'Your next session is right here.',
-                style: const TextStyle(color: Color(0xffb6c6b9), fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-
   Widget emptyLibrary() => Container(
     width: double.infinity,
     padding: const EdgeInsets.symmetric(vertical: 38, horizontal: 20),
@@ -654,18 +552,8 @@ class _LauncherShellState extends State<LauncherShell> {
         const Icon(Icons.folder_open_rounded, size: 36, color: muted),
         const SizedBox(height: 15),
         Text(
-          search.isEmpty
-              ? 'A little space for your favorites'
-              : 'No matches yet',
+          search.isEmpty ? 'No applications' : 'No matches',
           style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 7),
-        Text(
-          search.isEmpty
-              ? 'Choose an NSP or XCI file. Updates and add-ons stay together.'
-              : 'Try a different name.',
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: muted),
         ),
         if (search.isEmpty) ...[
           const SizedBox(height: 18),
@@ -826,7 +714,6 @@ class _LauncherShellState extends State<LauncherShell> {
     children: [
       Row(
         children: [
-          eyebrow('IN YOUR LIBRARY'),
           const Spacer(),
           PopupMenuButton<String>(
             enabled: !c.active,
@@ -853,11 +740,6 @@ class _LauncherShellState extends State<LauncherShell> {
         entry['name'] as String,
         style: Theme.of(context).textTheme.headlineMedium,
       ),
-      const SizedBox(height: 8),
-      Text(
-        'Version ${entry['description']['application_version']}',
-        style: const TextStyle(color: muted, fontSize: 12),
-      ),
       const SizedBox(height: 24),
       SizedBox(
         width: double.infinity,
@@ -866,6 +748,7 @@ class _LauncherShellState extends State<LauncherShell> {
           onPressed: c.busy || c.active || c.capabilities['ready'] != true
               ? null
               : () {
+                  if (Navigator.of(context).canPop()) Navigator.pop(context);
                   c.action('session.start', {'id': entry['id']});
                   setState(() => page = 1);
                 },
@@ -880,6 +763,7 @@ class _LauncherShellState extends State<LauncherShell> {
           onPressed: c.busy || c.active
               ? null
               : () {
+                  if (Navigator.of(context).canPop()) Navigator.pop(context);
                   c.action('session.prepare', {'id': entry['id']});
                   setState(() => page = 1);
                 },
@@ -889,15 +773,13 @@ class _LauncherShellState extends State<LauncherShell> {
       ),
       if (c.capabilities['ready'] != true)
         TextButton(
-          onPressed: () => setState(() => page = 2),
-          child: const Text(
-            'Review runtime setup',
-            style: TextStyle(fontSize: 12),
-          ),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) Navigator.pop(context);
+            setState(() => page = 2);
+          },
+          child: const Text('Runtime setup', style: TextStyle(fontSize: 12)),
         ),
       const SizedBox(height: 24),
-      eyebrow('MAKE IT YOURS'),
-      const SizedBox(height: 10),
       ListTile(
         contentPadding: EdgeInsets.zero,
         leading: const Icon(Icons.layers_outlined, size: 21),
@@ -923,13 +805,22 @@ class _LauncherShellState extends State<LauncherShell> {
         onTap: () => showPreferences(context, c, entry),
       ),
       const SizedBox(height: 20),
-      const Divider(),
-      const SizedBox(height: 14),
-      eyebrow('SOURCE FILE'),
-      const SizedBox(height: 10),
-      SelectableText(
-        entry['path'] as String,
-        style: const TextStyle(fontSize: 11, height: 1.6, color: muted),
+      ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        title: const Text('Information', style: TextStyle(fontSize: 13)),
+        children: [
+          ListTile(
+            title: const Text('Version'),
+            trailing: Text('${entry['description']['application_version']}'),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: SelectableText(
+              entry['path'] as String,
+              style: const TextStyle(fontSize: 11, color: muted),
+            ),
+          ),
+        ],
       ),
     ],
   );
@@ -938,158 +829,114 @@ class _LauncherShellState extends State<LauncherShell> {
     final session = c.session;
     final metrics = session['metrics'] as Map? ?? {};
     final state = session['state'] as String? ?? 'idle';
+    final entry = c.library
+        .where((e) => e['id'] == session['entry_id'])
+        .firstOrNull;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(36),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          eyebrow('LIVE WORKSPACE'),
-          const SizedBox(height: 10),
-          Text(
-            'Your session',
-            style: Theme.of(context).textTheme.headlineLarge,
-          ),
-          const SizedBox(height: 26),
+          Text('Session', style: Theme.of(context).textTheme.headlineLarge),
+          const SizedBox(height: 28),
           panel(
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: .5),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Icon(
-                    c.active
-                        ? Icons.play_arrow_rounded
-                        : Icons.sports_esports_outlined,
-                    size: 30,
-                  ),
-                ),
+                const Icon(Icons.play_circle_outline, size: 36),
                 const SizedBox(width: 20),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        session['message'] as String? ?? 'Ready when you are',
+                        entry?['name'] as String? ?? 'No active session',
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
-                      const SizedBox(height: 7),
-                      Text(
-                        state == 'idle'
-                            ? 'Choose an application from your library to begin.'
-                            : state.toUpperCase(),
-                        style: const TextStyle(color: muted, fontSize: 11),
-                      ),
+                      const SizedBox(height: 6),
+                      Text(state, style: const TextStyle(color: muted)),
                     ],
                   ),
                 ),
                 if (c.active)
                   OutlinedButton.icon(
                     onPressed: stop,
-                    icon: const Icon(Icons.stop_rounded, size: 17),
-                    label: Text(
-                      state == 'preparing' ? 'Cancel' : 'End session',
-                    ),
+                    icon: const Icon(Icons.stop_rounded),
+                    label: const Text('Stop'),
                   ),
               ],
             ),
           ),
-          if (state == 'preparing' || state == 'launching')
-            const Padding(
-              padding: EdgeInsets.only(top: 16),
-              child: LinearProgressIndicator(),
-            ),
-          const SizedBox(height: 24),
-          Wrap(
-            spacing: 16,
-            runSpacing: 16,
-            children: [
-              for (final item in [
-                ('frames', 'Rendered frames'),
-                ('shader_loads', 'Shaders loaded'),
-                ('shader_failures', 'Shader errors'),
-                ('save_commits', 'Save commits'),
-              ])
-                SizedBox(
-                  width: 180,
-                  child: panel(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${metrics[item.$1] ?? '—'}',
-                          style: Theme.of(context).textTheme.headlineMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          item.$2,
-                          style: const TextStyle(color: muted, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           if (state == 'running')
             Wrap(
               spacing: 12,
+              runSpacing: 12,
               children: [
                 OutlinedButton.icon(
-                  onPressed: () {
-                    final entry = c.library
-                        .where((e) => e['id'] == session['entry_id'])
-                        .firstOrNull;
-                    if (entry != null) showPreferences(context, c, entry);
-                  },
+                  onPressed: entry == null
+                      ? null
+                      : () => showPreferences(context, c, entry),
                   icon: const Icon(Icons.tune, size: 18),
                   label: const Text('Display & controls'),
                 ),
                 OutlinedButton.icon(
                   onPressed: controllers,
                   icon: const Icon(Icons.sports_esports_outlined, size: 18),
-                  label: const Text('Choose controller'),
+                  label: const Text('Controller'),
                 ),
               ],
             ),
           if (session['report'] != null)
+            FilledButton.icon(
+              onPressed: () => reportDialog(
+                Map<String, dynamic>.from(session['report'] as Map),
+              ),
+              icon: const Icon(Icons.bug_report_outlined),
+              label: const Text('Repair prompt'),
+            ),
+          if (state == 'failed')
             Padding(
-              padding: const EdgeInsets.only(bottom: 20),
-              child: FilledButton.icon(
-                onPressed: () => reportDialog(
-                  Map<String, dynamic>.from(session['report'] as Map),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Text(
+                session['message'] as String? ?? '',
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+          const SizedBox(height: 20),
+          panel(
+            child: ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              title: const Text('Diagnostics'),
+              children: [
+                Wrap(
+                  spacing: 24,
+                  runSpacing: 12,
+                  children: [
+                    for (final item in [
+                      ('frames', 'Frames'),
+                      ('shader_loads', 'Shaders'),
+                      ('shader_failures', 'Errors'),
+                      ('save_commits', 'Saves'),
+                    ])
+                      Text(
+                        '${item.$2}  ${metrics[item.$1] ?? '—'}',
+                        style: const TextStyle(color: muted),
+                      ),
+                  ],
                 ),
-                icon: const Icon(Icons.bug_report_outlined),
-                label: const Text('View repair prompt'),
-              ),
-            ),
-          const SizedBox(height: 24),
-          eyebrow('SESSION DETAILS'),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: const Color(0xff202c25),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: SelectableText(
-              (session['logs'] as List? ?? []).isEmpty
-                  ? 'Progress and runtime messages will appear here.'
-                  : (session['logs'] as List).reversed
-                        .take(35)
-                        .toList()
-                        .reversed
-                        .join('\n'),
-              style: const TextStyle(
-                color: Color(0xffc4d1c7),
-                fontFamily: 'monospace',
-                fontSize: 11,
-                height: 1.7,
-              ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: SelectableText(
+                    (session['logs'] as List? ?? []).join('\n'),
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 11,
+                      height: 1.6,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -1158,75 +1005,52 @@ class _LauncherShellState extends State<LauncherShell> {
 
   Widget settingsPage() {
     final checks = c.capabilities['checks'] as Map? ?? {};
-    Widget location(
-      String title,
-      String field,
-      String hint, {
-      bool directory = false,
-    }) => ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(
-        directory ? Icons.folder_outlined : Icons.description_outlined,
-        size: 22,
-      ),
-      title: Text(
-        title,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-      ),
-      subtitle: Padding(
-        padding: const EdgeInsets.only(top: 6),
-        child: Text(
-          (c.config[field] as String? ?? '').isEmpty
-              ? hint
-              : c.config[field] as String,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(color: muted, fontSize: 12),
-        ),
-      ),
-      trailing: OutlinedButton(
-        onPressed: c.active || c.busy || !c.connected
+    Widget location(String title, String field, {bool directory = false}) {
+      final value = c.config[field] as String? ?? '';
+      return ListTile(
+        contentPadding: EdgeInsets.zero,
+        title: Text(title, style: const TextStyle(fontSize: 14)),
+        subtitle: value.isEmpty
             ? null
-            : () async {
-                final path = directory
-                    ? await getDirectoryPath()
-                    : (await openFile())?.path;
-                if (path != null) {
-                  await c.action('config.update', {
-                    'patch': {field: path},
-                  });
-                }
-              },
-        child: const Text('Choose'),
-      ),
-    );
+            : Tooltip(
+                message: value,
+                child: Text(
+                  p.basename(value),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+        trailing: OutlinedButton(
+          onPressed: c.active || c.busy || !c.connected
+              ? null
+              : () async {
+                  final path = directory
+                      ? await getDirectoryPath()
+                      : (await openFile())?.path;
+                  if (path != null) {
+                    await c.action('config.update', {
+                      'patch': {field: path},
+                    });
+                  }
+                },
+          child: const Text('Choose'),
+        ),
+      );
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(36),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          eyebrow('YOUR SETUP, YOUR WAY'),
-          const SizedBox(height: 10),
           Text('Settings', style: Theme.of(context).textTheme.headlineLarge),
-          const SizedBox(height: 10),
-          const Text(
-            'A few essentials, then you’re ready to go.',
-            style: TextStyle(color: muted),
-          ),
           const SizedBox(height: 28),
           panel(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 sectionTitle(Icons.link, 'Runtime connection'),
-                const SizedBox(height: 16),
-                Text(
-                  c.connected
-                      ? 'Connected to your local runtime.'
-                      : 'Select the nsp-dawrin runtime folder to get started.',
-                  style: const TextStyle(color: muted),
-                ),
-                const SizedBox(height: 15),
+                const SizedBox(height: 20),
                 Wrap(
                   spacing: 10,
                   runSpacing: 10,
@@ -1246,11 +1070,22 @@ class _LauncherShellState extends State<LauncherShell> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 10,
+                const SizedBox(height: 16),
+                location('Key file', 'keys'),
+                location('Cache folder', 'cache', directory: true),
+                if (c.connected && c.capabilities['execution'] != true)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                      'Playback requires macOS 26+ / ARM64.',
+                      style: TextStyle(color: muted),
+                    ),
+                  ),
+                ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  title: const Text('Advanced', style: TextStyle(fontSize: 14)),
                   children: [
+                    location('.NET executable', 'dotnet'),
                     for (final item in [
                       ('packages', 'Package tools'),
                       ('native', 'Native runner'),
@@ -1258,60 +1093,18 @@ class _LauncherShellState extends State<LauncherShell> {
                       ('dotnet', '.NET'),
                       ('spirv_cross', 'SPIRV-Cross'),
                     ])
-                      Chip(
-                        avatar: Icon(
+                      ListTile(
+                        dense: true,
+                        title: Text(item.$2),
+                        trailing: Icon(
                           checks[item.$1] == true
-                              ? Icons.check_circle
-                              : Icons.radio_button_unchecked,
-                          color: checks[item.$1] == true
-                              ? const Color(0xff678e44)
-                              : muted,
-                          size: 16,
+                              ? Icons.check_circle_outline
+                              : Icons.remove_circle_outline,
+                          size: 18,
+                          color: muted,
                         ),
-                        label: Text(
-                          item.$2,
-                          style: const TextStyle(fontSize: 11),
-                        ),
-                        side: const BorderSide(color: border),
-                        backgroundColor: canvas,
                       ),
                   ],
-                ),
-                if (c.connected && c.capabilities['execution'] != true)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 12),
-                    child: Text(
-                      'Library and preparation are available here. Game execution currently requires an ARM64 Mac with macOS 26 or later.',
-                      style: TextStyle(color: muted),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          panel(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                sectionTitle(Icons.folder_copy_outlined, 'Files & storage'),
-                const SizedBox(height: 12),
-                location(
-                  'Local key file',
-                  'keys',
-                  'Choose the key backup from your device',
-                ),
-                const Divider(),
-                location(
-                  'Prepared content',
-                  'cache',
-                  'Choose a cache folder',
-                  directory: true,
-                ),
-                const Divider(),
-                location(
-                  '.NET executable',
-                  'dotnet',
-                  'Detected automatically when available',
                 ),
               ],
             ),
@@ -1322,10 +1115,7 @@ class _LauncherShellState extends State<LauncherShell> {
               child: ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.tune),
-                title: Text('Preferences · ${c.selected!['name']}'),
-                subtitle: const Text(
-                  'Display mode, fullscreen and keyboard controls',
-                ),
+                title: Text(c.selected!['name'] as String),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => showPreferences(context, c, c.selected!),
               ),
@@ -1336,15 +1126,6 @@ class _LauncherShellState extends State<LauncherShell> {
   }
 }
 
-Widget eyebrow(String text) => Text(
-  text,
-  style: const TextStyle(
-    color: muted,
-    fontSize: 10,
-    fontWeight: FontWeight.w700,
-    letterSpacing: 1.8,
-  ),
-);
 Widget panel({required Widget child}) => Container(
   padding: const EdgeInsets.all(23),
   decoration: BoxDecoration(

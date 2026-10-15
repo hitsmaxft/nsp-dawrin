@@ -92,6 +92,9 @@ void main() {
             ).readAsBytes().then((b) => ByteData.sublistView(b)),
           );
         await font.load();
+        final icons = FontLoader('MaterialIcons')
+          ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));
+        await icons.load();
       });
     }
     final controller = LauncherController(api: api);
@@ -109,11 +112,15 @@ void main() {
     tester,
   ) async {
     await mount(tester, FakeApi());
-    expect(find.text('Your library'), findsOneWidget);
+    expect(find.text('Library'), findsWidgets);
     expect(find.byKey(const Key('add-package')), findsOneWidget);
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
     expect(find.text('Runtime connection'), findsOneWidget);
+    expect(find.text('SPIRV-Cross'), findsNothing);
+    await tester.tap(find.text('Advanced'));
+    await tester.pumpAndSettle();
+    expect(find.text('SPIRV-Cross'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
   testWidgets('library searches and starts the selected application', (
@@ -155,7 +162,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Console · 1080p'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Save preferences'));
+    await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
     expect(api.calls, contains('library.update'));
     expect(api.lastParams?['patch']['preferences']['mode'], 'console');
