@@ -180,3 +180,21 @@ reference; no LASRecomp implementation or game-specific data is vendored.
 Its single-title launcher/settings and separate playthrough data also informed
 the multi-game feature design in `docs/feature-design.md`; per-application
 settings inheritance is an independent implementation.
+
+The service/backend review at LASRecomp revision
+`ffa37e0430e68379436a7eaedd8a2a9a9d7fda61` additionally covered
+`runtime/services/{acc,am,hid_set,misc,time}.c`, `runtime/platform.h`, and
+`runtime/platform/{linux,windows}.c`. It informed the separation of guest service
+objects from platform operations. The new compatibility services and platform
+backends are independently implemented; no upstream service stubs, title IDs,
+patches or runtime data were adopted. The command and domain-object contracts
+were cross-checked against libnx `sf/cmif.h` and `services/time.c` at the libnx
+revision recorded above. See [API review](compatibility-api-review.md).
+
+The Windows backend uses Microsoft Windows SDK APIs (QPC, SRW locks, process
+memory access and BCrypt); the Linux backend uses POSIX clocks/pthreads,
+`getentropy`, and Linux `process_vm_readv`/`process_vm_writev`. These system SDKs
+are not vendored. CMake (Kitware, BSD 3-Clause, minimum 3.20; locally verified
+with 4.4.4) builds the portable service tests; see
+[cmake.org](https://cmake.org/) and its [license](https://cmake.org/licensing/).
+GitHub Actions uses `actions/checkout@v4` (GitHub, MIT) for the platform matrix.
