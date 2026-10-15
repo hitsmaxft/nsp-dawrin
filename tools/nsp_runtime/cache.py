@@ -37,7 +37,7 @@ def digest_files(files, options):
 
 def chain_version(directory, cross=None):
     cross = cross or shutil.which('spirv-cross') or '/opt/homebrew/bin/spirv-cross'
-    compiler = TOOLS/'shader_translate/bin/Release/net10.0'
+    compiler = TOOLS.parent/'build/dotnet/bin/dmsh_xlate/release'
     files = {str(path.relative_to(TOOLS)): path for path in (TOOLS/'nsp_runtime').rglob('*.py')}
     for name in ('prepare_shaders.py', 'build_metal.py', 'compile_pending_shaders.py',
                  'shader_jobs.py', 'shader_translate/Program.cs', 'shader_translate/dmsh_xlate.csproj'):

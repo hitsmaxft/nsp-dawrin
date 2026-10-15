@@ -1,7 +1,7 @@
 CC := /usr/bin/clang
-OUT ?= ../work/bin/nsp-dawrin
-BUILD ?= ../work/build/obj
-OCR_BIN ?= ../work/bin
+OUT ?= build/bin/nsp-dawrin
+BUILD ?= build/obj
+OCR_BIN ?= build/bin
 CFLAGS := -O1 -g -Wall -Wno-unused-function -Wno-unused-variable -Isrc/host -Isrc/third_party/openmax-interface -Isrc/gfx/nvn/include -fobjc-arc -mmacosx-version-min=26.0
 SRC := $(sort $(wildcard src/macos/*.c src/macos/*.m src/host/*.c src/host/*.S src/gfx/*.c src/gfx/nvn/*.c src/gfx/nvn/*.m src/gfx/nvn/*.S src/gfx/tex/*.c src/gfx/tex/*.m))
 OBJ := $(addprefix $(BUILD)/,$(addsuffix .o,$(notdir $(SRC))))
@@ -41,3 +41,4 @@ $(BUILD)/%.o: % Makefile
 .PHONY: clean
 clean:
 	rm -f $(OUT) $(OBJ) $(OBJ:.o=.d) $(OCR_BIN)/switch-ocr $(OCR_BIN)/ocr-mask $(OCR_BIN)/warm-metal $(OCR_BIN)/crash-report
+	rm -rf build/obj build/bin build/dotnet build/nsp-dawrin.app

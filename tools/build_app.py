@@ -1,17 +1,16 @@
 """Package the native runner without application data or local secrets."""
 from pathlib import Path
 import plistlib
-import shlex
 import shutil
 import subprocess
 
 root = Path(__file__).resolve().parents[1]
-app = root.parent / "nsp-dawrin.app"
+app = root / "build/nsp-dawrin.app"
 contents = app / "Contents"
 macos = contents / "MacOS"
 macos.mkdir(parents=True, exist_ok=True)
-shutil.copy2(root.parent / "work/bin/nsp-dawrin", macos / "nsp-dawrin")
-shutil.copy2(root.parent / "work/bin/crash-report", macos / "crash-report")
+shutil.copy2(root / "build/bin/nsp-dawrin", macos / "nsp-dawrin")
+shutil.copy2(root / "build/bin/crash-report", macos / "crash-report")
 notices = contents / "Resources" / "Licenses"
 notices.mkdir(parents=True, exist_ok=True)
 for name in ("LICENSE", "COPYING"):
@@ -37,11 +36,23 @@ header = (root / "src/gfx/nvn/include/nvn.h").read_text()
     NSHighResolutionCapable=True,
 )))
 launcher = macos / "launcher"
-launcher.write_text("#!/bin/sh\nset -eu\n"
-    "export DM_WINDOW=1 DM_TIMEOUT=${DM_TIMEOUT:-0} DM_AUDIO=${DM_AUDIO:-1}\n"
-    f"export NATIVE_HOST={shlex.quote(str(macos / 'nsp-dawrin'))}\n"
-    f"export NSP_CRASH_REPORTER={shlex.quote(str(macos / 'crash-report'))}\n"
-    f"exec python3 {shlex.quote(str(root / 'tools/run_with_report.py'))} -- {shlex.quote(str(root / 'run.sh'))} \"$@\"\n")
+launcher.write_text("""#!/bin/sh
+set -eu
+MACOS=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+ROOT=$(CDPATH= cd -- "$MACOS/../../../.." && pwd)
+export DM_WINDOW=1 DM_TIMEOUT=${DM_TIMEOUT:-0} DM_AUDIO=${DM_AUDIO:-1}
+export NATIVE_HOST="$MACOS/nsp-dawrin"
+export NSP_CRASH_REPORTER="$MACOS/crash-report"
+if [ -z "${NSP_PYTHON:-}" ]; then
+    if [ -x "$ROOT/build/venv/bin/python3" ]; then
+        NSP_PYTHON="$ROOT/build/venv/bin/python3"
+    else
+        NSP_PYTHON=python3
+    fi
+fi
+export NSP_PYTHON
+exec "$NSP_PYTHON" "$ROOT/tools/run_with_report.py" -- "$ROOT/run.sh" "$@"
+""")
 launcher.chmod(0o755)
 subprocess.run(["codesign", "--force", "--deep", "--sign", "-", str(app)], check=True)
 print(app)

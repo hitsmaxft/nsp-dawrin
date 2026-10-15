@@ -28,7 +28,7 @@ class ContentTests(unittest.TestCase):
                 self.assertEqual(index['version'],2);self.assertEqual(len(index['mounts']),2)
                 self.assertEqual((root/'cache/ExeFS/main').read_bytes(),b'synthetic executable')
                 self.assertEqual(os.stat(index['sources'][0]['key_file']).st_mode&0o777,0o600)
-                native=Path(__file__).resolve().parents[2]/'work/bin/test-package-reader'
+                native=Path(__file__).resolve().parents[1]/'build/bin/test-package-reader'
                 if native.exists():
                     for mount,expected in zip(index['mounts'],(b'updated content',b'add-on content')):
                         env=dict(os.environ,DM_PACKAGE_INDEX=str(root/'cache/package-index.json'))
@@ -91,7 +91,7 @@ class ContentTests(unittest.TestCase):
             vfs=root/'vfs';vfs.mkdir();(vfs/'sample').write_bytes(bytes(16))
             manifest=root/'index.json';manifest.write_text(json.dumps(dict(version=2,sources=sources,
                 mounts=[dict(kind='base',root=str(vfs),files={'sample':[0,16]},segments=segments)])))
-            native=Path(__file__).resolve().parents[2]/'work/bin/test-package-reader'
+            native=Path(__file__).resolve().parents[1]/'build/bin/test-package-reader'
             if native.exists():
                 actual=subprocess.check_output([str(native),str(vfs/'sample'),'3','11'],env=dict(os.environ,DM_PACKAGE_INDEX=str(manifest)))
                 self.assertEqual(actual,b'dPATCHED!mn')

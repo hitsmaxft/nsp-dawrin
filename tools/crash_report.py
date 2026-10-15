@@ -155,7 +155,7 @@ def main():
     path = create_report(log, args.exit_code, args.output_root, args.repository)
     print(path)
     if args.show:
-        subprocess.Popen([str(ROOT.parent/'work/bin/crash-report'), str(path)], start_new_session=True)
+        subprocess.Popen([str(ROOT/'build/bin/crash-report'), str(path)], start_new_session=True)
 
 
 if __name__ == '__main__':

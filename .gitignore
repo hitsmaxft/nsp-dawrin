@@ -38,3 +38,5 @@ runtime.log
 report.json
 agent-prompt.md
 *.app/
+
+/build/

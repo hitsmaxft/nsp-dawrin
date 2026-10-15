@@ -13,16 +13,19 @@ A native launcher and ARM64 compatibility runtime for macOS. Guest CPU instructi
 Requires an ARM64 Mac with macOS 26 or later, Command Line Tools, Python, .NET 10, and `spirv-cross`.
 
 ```sh
-python3 -m venv ../work/venv
-. ../work/venv/bin/activate
+python3 -m venv build/venv
+. build/venv/bin/activate
 pip install -r requirements.txt
 
-dotnet build tools/shader_translate -c Release
+dotnet build tools/shader_translate -c Release --artifacts-path build/dotnet
 make -j4
 python3 tools/build_app.py
 ```
 
-The runner is built at `../work/bin/nsp-dawrin`. Build objects are shared in `../work/build/obj`.
+Build outputs stay under the ignored `build/` directory: `bin/` for native tools,
+`obj/` for native objects, `dotnet/` for the translator, `venv/` for Python, and
+`nsp-dawrin.app` for the development app. Run `make clean` to remove compiled
+outputs while keeping the Python environment, or remove `build/` for a full reset.
 
 ## Launch
 
@@ -70,7 +73,7 @@ startup; menu interaction and save/load can then be exercised through the CLI.
 Generated MSL can also be compiled in advance through the native Metal API:
 
 ```sh
-../work/bin/warm-metal /path/cache/shaders/metal/b-CHAIN
+build/bin/warm-metal /path/cache/shaders/metal/b-CHAIN
 python tools/shader_report.py /path/cache/shaders
 ```
 

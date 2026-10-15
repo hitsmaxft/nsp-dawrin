@@ -13,7 +13,7 @@ the roadmap; use docs/content-loading.md and docs/runtime-compatibility.md for c
 
 Keep source branding neutral; preserve required ABI symbol spellings and attribution. Never commit packages, assets, firmware, keys, saves, screenshots or captured shaders. Runtime data belongs outside the checkout. Treat package paths and local key locations as private. Do not print secret values. Preserve saves and the user's original packages during debugging.
 
-Inspect processes and mounts before cleanup. A work directory can contain live network mounts: never recursively delete its parent. Reuse `../work/build/obj`; keep Python environments and compiler caches outside the source tree where possible. Retain the built translator needed by the runtime. Clean only identified inactive generated artifacts, not entire workspaces or shared caches.
+Inspect processes and mounts before cleanup. A work directory can contain live network mounts: never recursively delete its parent. Use the ignored project-root `build/` directory for build artifacts: `build/obj`, `build/bin`, `build/venv`, and `build/dotnet`. Retain the built translator needed by the runtime. Clean only identified inactive generated artifacts, not entire workspaces or shared caches.
 
 ## Source map
 
@@ -67,7 +67,7 @@ MSL is compiled by the installed Metal framework. The system's compilation cache
 
 ## Verification and publication
 
-Run `make -j4` for the native host and `dotnet build tools/shader_translate -c Release` when changing translator code. Use the existing external Python environment for `python -m unittest discover -s tests -p 'test_*.py' -v`. Instruction tests require Unicorn; scanner tests require the dependencies in `requirements.txt`. Use targeted native harnesses in `tests/` for controller, mouse, package, unwind and Metal checks.
+Run `make -j4` for the native host and `dotnet build tools/shader_translate -c Release --artifacts-path build/dotnet` when changing translator code. Use `build/venv` for `python -m unittest discover -s tests -p 'test_*.py' -v`. Instruction tests require Unicorn; scanner tests require the dependencies in `requirements.txt`. Use targeted native harnesses in `tests/` for controller, mouse, package, unwind and Metal checks.
 
 Run only checks relevant to the change, then stop repeating successful checks unless evidence changes. Keep game-specific validation records outside the repository. Stage explicit source paths, inspect the diff for private data and generated files, and verify repository visibility and remote SHA after an authorized push. If the user requests unsigned commits, use `git -c commit.gpgsign=false commit`; do not alter global signing preferences.
 
@@ -95,6 +95,6 @@ Initialize settings before starting guest threads. Preference snapshots, updates
 
 Keep CLI-injected input separate from held keyboard keys; recompute keyboard buttons from all held physical keys so releasing one alias does not release another. Clear held input on focus loss and preference changes. Controller device IDs identify live framework objects; persisted vendor/category preferences identify a model, not a guaranteed physical-device serial number. An explicit device disconnect must not silently transfer held input to another identical controller.
 
-`tests/settings.m` checks persistence across processes and virtual controller selection. `tests/settings_ui.m` exercises real AppKit menu actions, key capture, focus release, drawable resolution and fullscreen transitions. Run both with a fresh `NSP_SETTINGS_PATH` outside the checkout; this keeps the user's preferences unchanged. Full-screen tests need an unlocked foreground macOS session. `--skip-fullscreen` runs the independent menu/input/resolution checks while explicitly reporting that skip. Reuse `../work/bin` for their small executables.
+`tests/settings.m` checks persistence across processes and virtual controller selection. `tests/settings_ui.m` exercises real AppKit menu actions, key capture, focus release, drawable resolution and fullscreen transitions. Run both with a fresh `NSP_SETTINGS_PATH` outside the checkout; this keeps the user's preferences unchanged. Full-screen tests need an unlocked foreground macOS session. `--skip-fullscreen` runs the independent menu/input/resolution checks while explicitly reporting that skip. Reuse `build/bin` for their small executables.
 
 Run `tools/service_catalog.py --check` before startup validation to detect binding conflicts. Use `tools/validate_matrix.py` to group failures by shared interface. See [runtime compatibility](docs/runtime-compatibility.md) for variant metadata, content loading and validation boundaries.

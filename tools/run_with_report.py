@@ -97,7 +97,7 @@ def supervise(command, output_root=None, show=True, echo=False):
         path = create_report(tail.text(), code, output_root, status=status, settings=settings, identity=identity)
         print(f'Crash report: {path}', file=sys.stderr)
         if show:
-            reporter = Path(os.environ.get('NSP_CRASH_REPORTER', ROOT.parent/'work/bin/crash-report'))
+            reporter = Path(os.environ.get('NSP_CRASH_REPORTER', ROOT/'build/bin/crash-report'))
             try:
                 subprocess.Popen([str(reporter), str(path)], start_new_session=True)
             except OSError as error:

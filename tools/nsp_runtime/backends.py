@@ -15,8 +15,10 @@ class MaxwellSpirvBackend:
 
     def translate(self, jobs, directory):
         directory.mkdir(parents=True, exist_ok=True)
-        dotnet = os.environ.get('DOTNET') or shutil.which('dotnet') or str(TOOLS.parents[1]/'work/dotnet/dotnet')
-        compiler = TOOLS/'shader_translate/bin/Release/net10.0/dmsh_xlate.dll'
+        dotnet = os.environ.get('DOTNET') or shutil.which('dotnet')
+        if not dotnet:
+            raise RuntimeError('Install .NET or set DOTNET to its executable')
+        compiler = TOOLS.parent/'build/dotnet/bin/dmsh_xlate/release/dmsh_xlate.dll'
         source_sha = hashlib.sha256(b''.join((TOOLS/'shader_translate'/name).read_bytes()
                                             for name in ('Program.cs', 'dmsh_xlate.csproj'))).hexdigest()[:16]
         actual = subprocess.check_output([dotnet, str(compiler), '--source-sha'], text=True, timeout=15).strip()

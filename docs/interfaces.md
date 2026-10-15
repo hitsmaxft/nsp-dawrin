@@ -87,4 +87,4 @@ Retained principles are command recording separated from Metal replay, explicit 
 python -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-Use the external environment with `requirements.txt` installed. Tests use synthetic shader records, a synthetic engine adapter, bounded resource reads, invalid formats, ambiguous detection, metadata restrictions and cache invalidation. Native input harnesses remain separate: virtual framework input and mouse events do not establish physical controller behavior.
+Use `build/venv` with `requirements.txt` installed. Tests use synthetic shader records, a synthetic engine adapter, bounded resource reads, invalid formats, ambiguous detection, metadata restrictions and cache invalidation. Native input harnesses remain separate: virtual framework input and mouse events do not establish physical controller behavior.

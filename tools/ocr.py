@@ -38,10 +38,10 @@ def recognize(path, backend="auto"):
     exe=shutil.which("tesseract") or "/opt/homebrew/bin/tesseract"
     if backend == "vision" or not Path(exe).exists():
         import json
-        helper=Path(__file__).resolve().parents[2]/"work/bin/switch-ocr"
+        helper=Path(__file__).resolve().parents[1]/"build/bin/switch-ocr"
         return json.loads(subprocess.check_output([str(helper),str(path)],timeout=10))
     if backend == "masked":
-        helper=Path(__file__).resolve().parents[2]/"work/bin/ocr-mask"
+        helper=Path(__file__).resolve().parents[1]/"build/bin/ocr-mask"
         masked=Path(path).with_suffix(".mask.png")
         subprocess.run([str(helper),str(path),str(masked)],check=True,timeout=5)
         path=masked

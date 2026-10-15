@@ -12,7 +12,7 @@ p = argparse.ArgumentParser(description=__doc__)
 p.add_argument("command", choices=["status", "threads", "press", "shot", "state", "click", "settings", "controller"])
 p.add_argument("value", nargs="?")
 p.add_argument("--socket", default=f"/tmp/nsp-dawrin-{os.getuid()}.sock")
-p.add_argument("--game-dir", type=Path, default=Path(os.environ.get("GAME_DIR", "../work/session")))
+p.add_argument("--game-dir", type=Path, default=Path(os.environ.get("GAME_DIR", str(Path.home()/"Library/Caches/nsp-dawrin/control"))))
 p.add_argument("--json", action="store_true", help="Print structured OCR state")
 p.add_argument("--settle", type=float, default=1.0, help="Seconds after input before OCR")
 p.add_argument("--capture-timeout", type=float, default=5.0, help="Seconds to wait for a rendered frame (up to 60)")
@@ -20,7 +20,6 @@ p.add_argument("--ocr", choices=["auto", "vision", "tesseract"], default="auto")
 args = p.parse_args()
 if not 0 < args.capture_timeout <= 60:
     p.error("--capture-timeout must be greater than zero and at most 60")
-root = Path(__file__).resolve().parents[2]
 ui_dir = args.game_dir.resolve()
 ui_dir.mkdir(parents=True, exist_ok=True)
 state_file = ui_dir / "ui-state.json"
