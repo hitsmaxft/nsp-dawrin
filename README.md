@@ -60,6 +60,12 @@ See [Content loading](docs/content-loading.md) for supported storage formats.
 The development focus is the native launcher; standalone application export and
 installers are deferred. The current app bundle uses the local development environment.
 
+## Automated checks
+
+CI generates an [original NSP test application](docs/ci-fixture.md) to verify
+package/update/DLC loading and rewriting on all three platforms, plus guest
+execution and failure detection on macOS ARM64.
+
 ## Startup check
 
 ```sh

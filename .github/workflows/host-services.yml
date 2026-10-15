@@ -11,6 +11,7 @@ jobs:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - name: Configure portable services
@@ -19,3 +20,26 @@ jobs:
         run: cmake --build build/services --config Debug --parallel 2
       - name: Test synthetic service contracts
         run: ctest --test-dir build/services -C Debug --output-on-failure
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install package pipeline dependencies
+        run: python -m pip install -r requirements-core.txt
+      - name: Build and validate original NSP fixtures
+        run: python -m unittest discover -s tests -p test_fixture_app.py -v
+  native-fixture:
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install package pipeline dependencies
+        run: python -m pip install -r requirements-core.txt
+      - name: Build native ARM64 runner
+        run: make -j3 build/bin/nsp-dawrin
+      - name: Check service registration
+        run: python tools/service_catalog.py --check
+      - name: Execute original NSP and verify negative control
+        run: python tests/fixture_app.py --native-host build/bin/nsp-dawrin --negative-control

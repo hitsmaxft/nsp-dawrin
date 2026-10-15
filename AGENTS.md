@@ -111,3 +111,8 @@ For service/backend work, read `docs/backend-architecture.md` and run the portab
 CMake/CTest target in `build/services`. Keep OS headers out of `src/compat`; keep
 guest ABI layouts out of `src/backend`. Do not confuse the portable service
 library with a complete Windows/Linux execution or graphics backend.
+
+Use `tests/fixture_app.py` for original synthetic NSP checks before commercial
+application bring-up. Keep generated packages and keys outside the checkout.
+Run `--native-host build/bin/nsp-dawrin --negative-control` for actual guest
+execution; package/rewrite success alone must not be reported as native execution.
