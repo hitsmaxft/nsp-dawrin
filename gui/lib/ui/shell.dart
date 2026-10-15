@@ -1,8 +1,10 @@
 import 'dart:async';
+
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
+
 import '../models/launcher_controller.dart';
 import 'preferences.dart';
 import 'theme.dart';
@@ -424,6 +426,7 @@ class _LauncherShellState extends State<LauncherShell> {
     );
     final detail = width >= 1250 && c.selected != null;
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
           child: SingleChildScrollView(
@@ -475,7 +478,7 @@ class _LauncherShellState extends State<LauncherShell> {
                     DropdownButtonHideUnderline(
                       child: DropdownButton<bool>(
                         value: alphabetical,
-                        style: const TextStyle(fontSize: 12, color: muted),
+                        style: const TextStyle(fontFamily: 'Arial', fontSize: 12, color: muted),
                         borderRadius: BorderRadius.circular(12),
                         items: const [
                           DropdownMenuItem(

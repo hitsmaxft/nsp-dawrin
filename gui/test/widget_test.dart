@@ -113,6 +113,7 @@ void main() {
   ) async {
     await mount(tester, FakeApi());
     expect(find.text('Library'), findsWidgets);
+    expect(tester.getTopLeft(find.text('Library').last).dy, lessThan(100));
     expect(find.byKey(const Key('add-package')), findsOneWidget);
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();

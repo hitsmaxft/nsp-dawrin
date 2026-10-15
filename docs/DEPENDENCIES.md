@@ -227,7 +227,7 @@ These packages are used without local modifications. The file selector's
 platform implementations and interfaces, cross_file, plugin_platform_interface,
 and Dart core utility packages are transitive dependencies recorded in the lock
 file. Flutter emits their registered package licenses and engine notices into
-the application; **About & acknowledgments** opens the runtime license registry.
+the application; **About** opens the runtime license registry.
 The build helper also includes the project GPL license and preserved notices.
 Material icon glyphs come from Flutter's bundled Material Icons font (Google,
 Apache-2.0); its notice is included in Flutter's generated license bundle. No
