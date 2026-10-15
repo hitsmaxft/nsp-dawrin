@@ -29,6 +29,8 @@ jobs:
         run: python -m unittest discover -s tests -p test_host_io.py -v
       - name: Build and validate original NSP fixtures
         run: python -m unittest discover -s tests -p test_fixture_app.py -v
+      - name: Check desktop launcher API
+        run: python -m unittest discover -s tests -p test_launcher.py -v
   native-fixture:
     runs-on: macos-26
     timeout-minutes: 10
